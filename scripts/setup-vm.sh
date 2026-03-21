@@ -10,12 +10,12 @@ set -euo pipefail
 
 VM_IP="${1:?Usage: $0 <vm-public-ip>}"
 SSH_USER="azureuser"
-SSH_OPTS="-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30"
+SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30)
 
 echo "🔗 Connecting to $SSH_USER@$VM_IP..."
 
 # Run the full setup remotely via SSH heredoc
-ssh $SSH_OPTS "${SSH_USER}@${VM_IP}" bash <<'REMOTE_SCRIPT'
+ssh "${SSH_OPTS[@]}" "${SSH_USER}@${VM_IP}" bash <<'REMOTE_SCRIPT'
 set -euo pipefail
 
 echo ""

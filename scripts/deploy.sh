@@ -93,7 +93,7 @@ while true; do
   DNS_FQDN="${VM_NAME}.${LOCATION}.cloudapp.azure.com"
   echo -e "   Checking DNS availability for ${CYAN}${DNS_FQDN}${NC}..."
 
-  if host "$DNS_FQDN" &>/dev/null 2>&1; then
+  if nslookup "$DNS_FQDN" &>/dev/null 2>&1; then
     echo -e "   ${RED}❌ '$DNS_FQDN' is already taken. Please choose a different name.${NC}"
   else
     echo -e "   ${GREEN}✔ '$DNS_FQDN' is available!${NC}"
@@ -134,7 +134,7 @@ DEPLOYMENT_NAME="openclaw-$(date +%Y%m%d-%H%M%S)"
 
 echo ""
 echo -e "${CYAN}🚀 Deploying infrastructure (~3 minutes)...${NC}"
-RESULT=$(az deployment group create \
+az deployment group create \
   --resource-group "$RESOURCE_GROUP" \
   --name "$DEPLOYMENT_NAME" \
   --template-file "infra/main.bicep" \
@@ -143,10 +143,13 @@ RESULT=$(az deployment group create \
     location="$LOCATION" \
     vmName="$VM_NAME" \
     adminUsername="$ADMIN_USERNAME" \
-  --output json)
+  --output none
 
 # ── Print outputs ─────────────────────────────────────────────
-PUBLIC_IP=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['properties']['outputs']['publicIpAddress']['value'])")
+PUBLIC_IP=$(az deployment group show \
+  --resource-group "$RESOURCE_GROUP" \
+  --name "$DEPLOYMENT_NAME" \
+  --query "properties.outputs.publicIpAddress.value" -o tsv)
 
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"

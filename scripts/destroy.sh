@@ -8,8 +8,17 @@
 
 set -euo pipefail
 
-RESOURCE_GROUP="openclaw-rg"
+# Read resource group from last deployment if available
+if [ -f ".deployment-info" ]; then
+  # shellcheck source=/dev/null
+  source .deployment-info
+  echo "ℹ️  Loaded deployment info: resource group '$RESOURCE_GROUP'"
+else
+  RESOURCE_GROUP="openclaw-rg"
+  echo "ℹ️  No .deployment-info found, defaulting to: $RESOURCE_GROUP"
+fi
 
+echo ""
 echo "⚠️  WARNING: This will permanently delete resource group: $RESOURCE_GROUP"
 echo "   All VMs, disks, IPs, and networking resources will be destroyed."
 echo ""

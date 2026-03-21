@@ -13,7 +13,6 @@ param adminUsername string
 param sshPublicKey string
 
 param subnetId string
-param nsgId string
 
 // ── Public IP ────────────────────────────────────────────────
 
@@ -37,9 +36,7 @@ resource nic 'Microsoft.Network/networkInterfaces@2023-09-01' = {
   name: '${vmName}-nic'
   location: location
   properties: {
-    networkSecurityGroup: {
-      id: nsgId
-    }
+    // NSG is applied at subnet level in network.bicep — no need to duplicate here
     ipConfigurations: [
       {
         name: 'ipconfig1'

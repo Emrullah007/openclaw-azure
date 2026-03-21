@@ -19,8 +19,8 @@ param adminUsername string = 'azureuser'
 @secure()
 param sshPublicKey string
 
-@description('Source IP allowed for SSH. Use your own IP for best security (e.g. "1.2.3.4/32"). Use "*" to allow all (not recommended).')
-param allowedSshSourceIp string = '*'
+@description('Source IP allowed for SSH (e.g. "1.2.3.4/32"). Required — no default to prevent accidental open access.')
+param allowedSshSourceIp string
 
 // ── Modules ─────────────────────────────────────────────────
 
@@ -41,7 +41,6 @@ module vm 'vm.bicep' = {
     adminUsername: adminUsername
     sshPublicKey: sshPublicKey
     subnetId: network.outputs.subnetId
-    nsgId: network.outputs.nsgId
   }
 }
 
@@ -49,4 +48,4 @@ module vm 'vm.bicep' = {
 
 output publicIpAddress string = vm.outputs.publicIpAddress
 output sshCommand string = 'ssh ${adminUsername}@${vm.outputs.publicIpAddress}'
-output gatewayUrl string = 'http://${vm.outputs.publicIpAddress}:18789'
+output gatewayTunnel string = 'ssh -L 18789:localhost:18789 ${adminUsername}@${vm.outputs.publicIpAddress}'
