@@ -1,0 +1,14 @@
+# ── Secrets — NEVER commit these ─────────────────────────────
+.env
+*.env
+infra/parameters.json
+
+# ── OS / Editor ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+logs/
