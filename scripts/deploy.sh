@@ -58,7 +58,7 @@ read -p "   Enter number [1]: " REGION_CHOICE
 REGION_CHOICE="${REGION_CHOICE:-1}"
 
 case "$REGION_CHOICE" in
-  1) LOCATION="westus2";    REGION_LABEL="West US 2 (Seattle)" ;;
+  1) LOCATION="westus2";    REGION_LABEL="West US 2 (Washington)" ;;
   2) LOCATION="westus3";    REGION_LABEL="West US 3 (Phoenix)" ;;
   3) LOCATION="eastus";     REGION_LABEL="East US (Virginia)" ;;
   4) LOCATION="centralus";  REGION_LABEL="Central US (Iowa)" ;;
