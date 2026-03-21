@@ -47,7 +47,7 @@ az account show --output table 2>/dev/null || {
 echo ""
 echo -e "${CYAN}🌍 Select Azure Region:${NC}"
 echo ""
-echo "   [1] West US 2        (Washington — closest to Seattle) ~\$24/mo"
+echo "   [1] West US 2        (Washington)                      ~\$24/mo"
 echo "   [2] West US 3        (Phoenix)                         ~\$24/mo"
 echo "   [3] East US          (Virginia)                        ~\$22/mo"
 echo "   [4] Central US       (Iowa)                            ~\$23/mo"
