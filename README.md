@@ -137,55 +137,76 @@ Edit `docker/.env` with your Azure AI Foundry keys and Telegram bot token.
 
 ```bash
 chmod +x scripts/*.sh
-az login
 ./scripts/deploy.sh
 ```
 
-This creates the resource group, VM, networking, and NSG in ~3 minutes.
+The script will interactively ask you to:
+- Select a region (with estimated monthly cost shown)
+- Name your resource group (default: `openclaw-rg`)
+- Choose a VM name — it checks DNS availability automatically and re-prompts if taken
+- Confirm before deploying
+
+Deployment takes ~3 minutes. At the end you'll see:
+
+```
+╔══════════════════════════════════════════════════╗
+║  ✅  Deployment complete!                        ║
+╠══════════════════════════════════════════════════╣
+║  Public IP  : 20.x.x.x
+║  DNS        : your-vm-name.westus2.cloudapp.azure.com
+║  SSH        : ssh azureuser@20.x.x.x
+║  Tunnel     : ssh -L 18789:localhost:18789 azureuser@20.x.x.x
+╚══════════════════════════════════════════════════╝
+```
+
+> Your VM IP and name are saved to `.deployment-info` (gitignored).
 
 ### 4. Initialize the VM
 
 ```bash
-./scripts/setup-vm.sh <vm-public-ip>
+./scripts/setup-vm.sh 20.x.x.x   # use your actual VM IP from step 3
 ```
 
-Installs Docker, configures UFW firewall, and sets up fail2ban.
+This SSHes into the VM and automatically:
+- Updates all system packages
+- Installs Docker (v29+) and Docker Compose
+- Configures UFW firewall (deny all inbound except SSH)
+- Enables fail2ban (brute force protection)
+- Enables automatic security updates
+- Creates `~/.openclaw/config` and `~/.openclaw/workspace` directories
+
+At the end you'll see a security summary confirming all layers are active.
 
 ### 5. Install OpenClaw on the VM
 
-SSH into the VM:
+**5a. Clone OpenClaw** — SSH into the VM and clone the repo:
 ```bash
-ssh azureuser@<vm-public-ip>
-```
-
-Then on the VM:
-```bash
+ssh azureuser@20.x.x.x
 git clone https://github.com/openclaw/openclaw.git ~/openclaw
-cd ~/openclaw
 ```
 
-Copy your `.env` from your local machine:
+**5b. Copy your `.env`** — run this on your **local machine**:
 ```bash
-# Run this locally:
-scp docker/.env azureuser@<vm-public-ip>:~/openclaw/.env
+scp docker/.env azureuser@20.x.x.x:~/openclaw/.env
 ```
 
-Run the OpenClaw Docker setup:
+**5c. Run OpenClaw setup** — back on the VM:
 ```bash
-# On the VM:
 cd ~/openclaw
 ./scripts/docker/setup.sh
 ```
 
+This builds the Docker image and starts the OpenClaw gateway.
+
 ### 6. Access the Gateway
 
-The gateway is bound to loopback only (secure). Access it via SSH tunnel:
+The gateway only listens on localhost (not exposed to the internet). Access it via SSH tunnel from your local machine:
 
 ```bash
-ssh -L 18789:localhost:18789 azureuser@<vm-public-ip>
+ssh -L 18789:localhost:18789 azureuser@20.x.x.x
 ```
 
-Then open `http://localhost:18789` in your browser.
+Then open `http://localhost:18789` in your browser. You'll see the OpenClaw web UI.
 
 ---
 
