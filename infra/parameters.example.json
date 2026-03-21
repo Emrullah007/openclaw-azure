@@ -2,15 +2,6 @@
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "location": {
-      "value": "westus2"
-    },
-    "vmName": {
-      "value": "openclaw-vm"
-    },
-    "adminUsername": {
-      "value": "azureuser"
-    },
     "sshPublicKey": {
       "value": "ssh-rsa AAAA...your-public-key-here... user@host"
     },

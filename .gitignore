@@ -2,6 +2,7 @@
 .env
 *.env
 infra/parameters.json
+.deployment-info
 
 # ── OS / Editor ───────────────────────────────────────────────
 .DS_Store
