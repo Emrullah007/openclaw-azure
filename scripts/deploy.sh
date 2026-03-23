@@ -118,14 +118,22 @@ while true; do
   echo -e "   ${GREEN}✔ Region: $REGION_LABEL ($LOCATION)${NC}"
 
   # DNS availability check (region-scoped)
-  DNS_FQDN="${VM_NAME}.${LOCATION}.cloudapp.azure.com"
-  echo -e "   Checking DNS availability for ${CYAN}${DNS_FQDN}${NC}..."
-  if nslookup "$DNS_FQDN" &>/dev/null 2>&1; then
-    echo -e "   ${RED}❌ '$DNS_FQDN' is already taken in this region.${NC}"
-    echo -e "   ${YELLOW}   Try a different VM name or region.${NC}"
-    continue
-  fi
-  echo -e "   ${GREEN}✔ '$DNS_FQDN' is available!${NC}"
+  while true; do
+    DNS_FQDN="${VM_NAME}.${LOCATION}.cloudapp.azure.com"
+    echo -e "   Checking DNS availability for ${CYAN}${DNS_FQDN}${NC}..."
+    if nslookup "$DNS_FQDN" &>/dev/null 2>&1; then
+      echo -e "   ${RED}❌ '$DNS_FQDN' is already taken in this region.${NC}"
+      read -p "   Enter a different VM name [openclaw-vm]: " VM_NAME
+      VM_NAME="${VM_NAME:-openclaw-vm}"
+      if ! [[ "$VM_NAME" =~ ^[a-z][a-z0-9-]{1,13}[a-z0-9]$ ]]; then
+        echo -e "   ${RED}❌ Name must be 3-15 chars, start with a letter, end with a letter or number, hyphens allowed in between.${NC}"
+        VM_NAME="openclaw-vm"
+      fi
+      continue
+    fi
+    echo -e "   ${GREEN}✔ '$DNS_FQDN' is available!${NC}"
+    break
+  done
 
   # ── Summary ─────────────────────────────────────────────────
   echo ""
@@ -175,8 +183,8 @@ while true; do
       echo -e "${RED}❌ Standard_B2als_v2 is not available in $REGION_LABEL right now.${NC}"
       echo -e "   This is an Azure capacity issue — your configuration is correct."
       echo ""
-      echo -e "   Cleaning up empty resource group..."
-      az group delete --name "$RESOURCE_GROUP" --yes --no-wait 2>/dev/null || true
+      echo -e "   Cleaning up empty resource group (this takes ~1 minute)..."
+      az group delete --name "$RESOURCE_GROUP" --yes 2>/dev/null || true
       echo ""
       read -p "   Try a different region? [Y/n]: " RETRY
       RETRY="${RETRY:-Y}"
