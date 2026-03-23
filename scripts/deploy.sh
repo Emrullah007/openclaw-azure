@@ -6,7 +6,7 @@
 # Usage: ./scripts/deploy.sh
 # ============================================================
 
-set -uo pipefail
+set -euo pipefail
 
 PARAMS_FILE="infra/parameters.json"
 

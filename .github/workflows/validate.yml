@@ -17,6 +17,7 @@ jobs:
         run: |
           bash -n scripts/deploy.sh
           bash -n scripts/setup-vm.sh
+          bash -n scripts/configure-openclaw.sh
           bash -n scripts/destroy.sh
 
       - name: ShellCheck
