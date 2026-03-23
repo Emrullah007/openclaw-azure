@@ -6,7 +6,7 @@
 # Usage: ./scripts/deploy.sh
 # ============================================================
 
-set -euo pipefail
+set -uo pipefail
 
 PARAMS_FILE="infra/parameters.json"
 
@@ -50,32 +50,6 @@ az account show --output table 2>/dev/null || {
   exit 1
 }
 
-# ── Region selection ──────────────────────────────────────────
-echo ""
-echo -e "${CYAN}🌍 Select Azure Region:${NC}"
-echo ""
-echo "   [1] West US 2        (Washington)                      ~\$24/mo"
-echo "   [2] West US 3        (Phoenix)                         ~\$24/mo"
-echo "   [3] East US          (Virginia)                        ~\$22/mo"
-echo "   [4] Central US       (Iowa)                            ~\$23/mo"
-echo "   [5] West Europe      (Netherlands)                     ~\$27/mo"
-echo "   [6] North Europe     (Ireland)                         ~\$25/mo"
-echo ""
-read -p "   Enter number [1]: " REGION_CHOICE
-REGION_CHOICE="${REGION_CHOICE:-1}"
-
-case "$REGION_CHOICE" in
-  1) LOCATION="westus2";    REGION_LABEL="West US 2 (Washington)" ;;
-  2) LOCATION="westus3";    REGION_LABEL="West US 3 (Phoenix)" ;;
-  3) LOCATION="eastus";     REGION_LABEL="East US (Virginia)" ;;
-  4) LOCATION="centralus";  REGION_LABEL="Central US (Iowa)" ;;
-  5) LOCATION="westeurope"; REGION_LABEL="West Europe (Netherlands)" ;;
-  6) LOCATION="northeurope";REGION_LABEL="North Europe (Ireland)" ;;
-  *) echo -e "${RED}❌ Invalid choice.${NC}"; exit 1 ;;
-esac
-
-echo -e "   ${GREEN}✔ Region: $REGION_LABEL ($LOCATION)${NC}"
-
 # ── Resource group name ───────────────────────────────────────
 echo ""
 read -p "   Resource group name [openclaw-rg]: " RESOURCE_GROUP
@@ -83,32 +57,18 @@ RESOURCE_GROUP="${RESOURCE_GROUP:-openclaw-rg}"
 echo -e "   ${GREEN}✔ Resource group: $RESOURCE_GROUP${NC}"
 
 # ── VM name with DNS availability check ───────────────────────
+# (DNS is region-scoped; re-check happens inside the region loop if needed)
 echo ""
-echo -e "${CYAN}🖥️  VM Name (used as DNS prefix: <name>.$LOCATION.cloudapp.azure.com)${NC}"
-echo ""
-
 while true; do
   read -p "   Enter VM name [openclaw-vm]: " VM_NAME
   VM_NAME="${VM_NAME:-openclaw-vm}"
 
-  # Validate: 1-15 chars, lowercase letters/numbers/hyphens, must start with letter,
-  # must not end with hyphen — satisfies both Azure DNS label and Linux hostname rules
   # 3-15 chars, start with letter, end with letter/number, hyphens in middle only
-  # Satisfies both Azure DNS label (min 3 chars) and Linux hostname rules
   if ! [[ "$VM_NAME" =~ ^[a-z][a-z0-9-]{1,13}[a-z0-9]$ ]]; then
     echo -e "   ${RED}❌ Name must be 3-15 chars, start with a letter, end with a letter or number, hyphens allowed in between.${NC}"
     continue
   fi
-
-  DNS_FQDN="${VM_NAME}.${LOCATION}.cloudapp.azure.com"
-  echo -e "   Checking DNS availability for ${CYAN}${DNS_FQDN}${NC}..."
-
-  if nslookup "$DNS_FQDN" &>/dev/null 2>&1; then
-    echo -e "   ${RED}❌ '$DNS_FQDN' is already taken. Please choose a different name.${NC}"
-  else
-    echo -e "   ${GREEN}✔ '$DNS_FQDN' is available!${NC}"
-    break
-  fi
+  break
 done
 
 # ── Admin username ────────────────────────────────────────────
@@ -118,7 +78,6 @@ while true; do
   ADMIN_USERNAME="${ADMIN_USERNAME:-azureuser}"
 
   # Linux username rules: start with letter/underscore, letters/numbers/hyphens/underscores, max 32 chars
-  # Also block reserved names that Azure/Linux reject
   if ! [[ "$ADMIN_USERNAME" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
     echo -e "   ${RED}❌ Username must start with a letter or underscore, contain only lowercase letters, numbers, hyphens, underscores, and be max 32 chars.${NC}"
     continue
@@ -131,62 +90,109 @@ while true; do
 done
 echo -e "   ${GREEN}✔ Admin username: $ADMIN_USERNAME${NC}"
 
-# ── Summary ───────────────────────────────────────────────────
-echo ""
-echo -e "${CYAN}─────────────────────────────────────────────${NC}"
-echo -e "  Region:         $REGION_LABEL"
-echo -e "  Resource Group: $RESOURCE_GROUP"
-echo -e "  VM Name:        $VM_NAME"
-echo -e "  Admin User:     $ADMIN_USERNAME"
-echo -e "  DNS:            $DNS_FQDN"
-echo -e "${CYAN}─────────────────────────────────────────────${NC}"
-echo ""
-read -p "   Proceed with deployment? [Y/n]: " CONFIRM
-CONFIRM="${CONFIRM:-Y}"
-[[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
+# ── Region + deployment loop (retries on SKU capacity failure) ─
+while true; do
+  echo ""
+  echo -e "${CYAN}🌍 Select Azure Region:${NC}"
+  echo ""
+  echo "   [1] East US          (Virginia)                        ~\$22/mo  ← most available"
+  echo "   [2] West US 2        (Washington)                      ~\$24/mo"
+  echo "   [3] West US 3        (Phoenix)                         ~\$24/mo"
+  echo "   [4] Central US       (Iowa)                            ~\$23/mo"
+  echo "   [5] West Europe      (Netherlands)                     ~\$27/mo"
+  echo "   [6] North Europe     (Ireland)                         ~\$25/mo"
+  echo ""
+  read -p "   Enter number [1]: " REGION_CHOICE
+  REGION_CHOICE="${REGION_CHOICE:-1}"
 
-# ── SKU availability check ────────────────────────────────────
-echo ""
-echo -e "${CYAN}🔍 Checking VM size availability in $LOCATION...${NC}"
-SKU_CHECK=$(az vm list-skus \
-  --location "$LOCATION" \
-  --size Standard_B2als_v2 \
-  --query "[?restrictions[?reasonCode=='NotAvailableForSubscription' || reasonCode=='NotAvailableForRegion']] | length(@)" \
-  --output tsv 2>/dev/null || echo "unknown")
+  case "$REGION_CHOICE" in
+    1) LOCATION="eastus";      REGION_LABEL="East US (Virginia)" ;;
+    2) LOCATION="westus2";     REGION_LABEL="West US 2 (Washington)" ;;
+    3) LOCATION="westus3";     REGION_LABEL="West US 3 (Phoenix)" ;;
+    4) LOCATION="centralus";   REGION_LABEL="Central US (Iowa)" ;;
+    5) LOCATION="westeurope";  REGION_LABEL="West Europe (Netherlands)" ;;
+    6) LOCATION="northeurope"; REGION_LABEL="North Europe (Ireland)" ;;
+    *) echo -e "${RED}❌ Invalid choice.${NC}"; continue ;;
+  esac
 
-if [ "$SKU_CHECK" = "unknown" ]; then
-  echo -e "   ${YELLOW}⚠ Could not verify VM size availability — proceeding anyway.${NC}"
-elif [ "$SKU_CHECK" -gt 0 ] 2>/dev/null; then
-  echo -e "   ${RED}❌ Standard_B2als_v2 is not available in $LOCATION due to capacity restrictions.${NC}"
-  echo -e "   Try a different region. East US (Virginia) typically has the best availability."
-  exit 1
-else
-  echo -e "   ${GREEN}✔ Standard_B2als_v2 is available in $LOCATION${NC}"
-fi
+  echo -e "   ${GREEN}✔ Region: $REGION_LABEL ($LOCATION)${NC}"
 
-# ── Create Resource Group ─────────────────────────────────────
-echo ""
-echo -e "${CYAN}📦 Creating resource group: $RESOURCE_GROUP in $LOCATION...${NC}"
-az group create \
-  --name "$RESOURCE_GROUP" \
-  --location "$LOCATION" \
-  --output table
+  # DNS availability check (region-scoped)
+  DNS_FQDN="${VM_NAME}.${LOCATION}.cloudapp.azure.com"
+  echo -e "   Checking DNS availability for ${CYAN}${DNS_FQDN}${NC}..."
+  if nslookup "$DNS_FQDN" &>/dev/null 2>&1; then
+    echo -e "   ${RED}❌ '$DNS_FQDN' is already taken in this region.${NC}"
+    echo -e "   ${YELLOW}   Try a different VM name or region.${NC}"
+    continue
+  fi
+  echo -e "   ${GREEN}✔ '$DNS_FQDN' is available!${NC}"
 
-# ── Deploy Bicep ──────────────────────────────────────────────
-DEPLOYMENT_NAME="openclaw-$(date +%Y%m%d-%H%M%S)"
+  # ── Summary ─────────────────────────────────────────────────
+  echo ""
+  echo -e "${CYAN}─────────────────────────────────────────────${NC}"
+  echo -e "  Region:         $REGION_LABEL"
+  echo -e "  Resource Group: $RESOURCE_GROUP"
+  echo -e "  VM Name:        $VM_NAME"
+  echo -e "  Admin User:     $ADMIN_USERNAME"
+  echo -e "  DNS:            $DNS_FQDN"
+  echo -e "${CYAN}─────────────────────────────────────────────${NC}"
+  echo ""
+  read -p "   Proceed with deployment? [Y/n]: " CONFIRM
+  CONFIRM="${CONFIRM:-Y}"
+  [[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
-echo ""
-echo -e "${CYAN}🚀 Deploying infrastructure (~3 minutes)...${NC}"
-az deployment group create \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$DEPLOYMENT_NAME" \
-  --template-file "infra/main.bicep" \
-  --parameters "@$PARAMS_FILE" \
-  --parameters \
-    location="$LOCATION" \
-    vmName="$VM_NAME" \
-    adminUsername="$ADMIN_USERNAME" \
-  --output none
+  # ── Create Resource Group ───────────────────────────────────
+  echo ""
+  echo -e "${CYAN}📦 Creating resource group: $RESOURCE_GROUP in $LOCATION...${NC}"
+  az group create \
+    --name "$RESOURCE_GROUP" \
+    --location "$LOCATION" \
+    --output table
+
+  # ── Deploy Bicep ────────────────────────────────────────────
+  DEPLOYMENT_NAME="openclaw-$(date +%Y%m%d-%H%M%S)"
+
+  echo ""
+  echo -e "${CYAN}🚀 Deploying infrastructure (~3 minutes)...${NC}"
+
+  set +e
+  DEPLOY_OUTPUT=$(az deployment group create \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$DEPLOYMENT_NAME" \
+    --template-file "infra/main.bicep" \
+    --parameters "@$PARAMS_FILE" \
+    --parameters \
+      location="$LOCATION" \
+      vmName="$VM_NAME" \
+      adminUsername="$ADMIN_USERNAME" \
+    --output none 2>&1)
+  DEPLOY_EXIT=$?
+  set -e
+
+  if [ $DEPLOY_EXIT -ne 0 ]; then
+    if echo "$DEPLOY_OUTPUT" | grep -q "SkuNotAvailable"; then
+      echo ""
+      echo -e "${RED}❌ Standard_B2als_v2 is not available in $REGION_LABEL right now.${NC}"
+      echo -e "   This is an Azure capacity issue — your configuration is correct."
+      echo ""
+      echo -e "   Cleaning up empty resource group..."
+      az group delete --name "$RESOURCE_GROUP" --yes --no-wait 2>/dev/null || true
+      echo ""
+      read -p "   Try a different region? [Y/n]: " RETRY
+      RETRY="${RETRY:-Y}"
+      [[ "$RETRY" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 1; }
+      continue
+    else
+      echo "$DEPLOY_OUTPUT"
+      echo ""
+      echo -e "${RED}❌ Deployment failed. See error above.${NC}"
+      exit 1
+    fi
+  fi
+
+  # Deployment succeeded — exit the loop
+  break
+done
 
 # ── Print outputs ─────────────────────────────────────────────
 PUBLIC_IP=$(az deployment group show \
