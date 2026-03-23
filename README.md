@@ -125,7 +125,9 @@ This is used to lock down SSH access so only your machine can connect to the VM.
 curl -4 ifconfig.me
 ```
 
-You will add `/32` to the result (e.g. `203.0.113.10/32`). This tells Azure: "only allow SSH from this exact IP address."
+You will add `/32` to the result (e.g. `12.34.56.78/32`). This tells Azure: "only allow SSH from this exact IP address."
+
+Copy this value — you will paste it into `infra/parameters.json` as `allowedSshSourceIp` in Step 2.
 
 > **Tip:** Home internet IPs can change occasionally. If you ever get locked out of your VM, update the NSG (Network Security Group) rule in Azure Portal with your new IP.
 
@@ -207,8 +209,8 @@ AZURE_DEPLOYMENT_NAME=your-deployment-name
 # Your Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN=123456789:your-token-here
 
-# Update <admin-username> to match the username you will choose in Step 4
-OPENCLAW_WORKSPACE_DIR=/home/<admin-username>/.openclaw/workspace
+# The default admin username is azureuser — change only if you pick a different one in Step 4
+OPENCLAW_WORKSPACE_DIR=/home/azureuser/.openclaw/workspace
 ```
 
 > `docker/.env` is listed in `.gitignore` and will never be committed to GitHub.
