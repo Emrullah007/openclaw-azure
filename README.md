@@ -377,7 +377,9 @@ Your bot is now active. Send it any message and it will respond using your Azure
 | View OpenClaw logs | on VM: `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
 | Full teardown | `./scripts/destroy.sh` |
 
-> **Reconnecting after VM restart:** after `az vm start`, SSH into the VM and run `docker compose -f ~/openclaw/docker-compose.yml up -d` if containers did not restart automatically. Then get a fresh dashboard URL with `dashboard --no-open` and approve your device again.
+> **Reconnecting after VM restart:** after `az vm start`, SSH into the VM and run `docker compose -f ~/openclaw/docker-compose.yml up -d` if containers did not restart automatically. Then get a fresh dashboard URL with `dashboard --no-open` and approve your device again. Telegram pairing survives restarts.
+>
+> **After a full teardown and redeploy** (running `destroy.sh` + starting from Step 4): all pairings are lost because the container data does not persist across deployments. You will need to re-pair your browser (Steps 7) and re-pair Telegram (Step 8) on the new VM. Make sure your `docker/.env` has the correct bot token before running `configure-openclaw.sh`.
 
 ---
 
