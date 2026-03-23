@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Infrastructure-as-Code deployment of [OpenClaw](https://openclaw.ai/) (open-source personal AI assistant) on a single Azure VM. OpenClaw connects to messaging apps (Telegram, WhatsApp, etc.) and uses LLMs to execute real tasks. This project deploys it on Azure using the user's own Azure AI Foundry GPT-4o model.
 
-**Owner context:** Seattle area. Budget: $20–30/month. Everything in one resource group (`openclaw-rg`) except the AI Foundry model (separate RG, pre-existing).
+**Budget target:** $20–30/month. Everything in one resource group (default: `openclaw-rg`) except the AI Foundry model (separate RG, pre-existing).
 
 ## Key Decisions
 

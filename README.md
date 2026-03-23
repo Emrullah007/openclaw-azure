@@ -1,8 +1,8 @@
 # OpenClaw on Azure
 
-Personal deployment of [OpenClaw](https://openclaw.ai/) on an Azure VM, powered by Azure AI Foundry (GPT-4o).
+Deploy [OpenClaw](https://openclaw.ai/) (open-source personal AI assistant) on a single Azure VM, powered by your own Azure AI Foundry model. OpenClaw connects to messaging apps (Telegram, WhatsApp, etc.) and uses LLMs to execute real tasks.
 
-**Budget target:** $20–30/month | **Region:** West US 2 (Seattle area)
+**Budget target:** ~$29/month | **VM:** Standard_B2als_v2 (2 vCPU, 4 GiB RAM)
 
 ---
 
@@ -13,7 +13,7 @@ Your Machine
     │
     └─ SSH Tunnel (port 18789)
             │
-    Azure Resource Group: openclaw-rg
+    Azure Resource Group
             │
     ┌───────▼────────────────────────┐
     │  Ubuntu 24.04 VM               │
@@ -22,17 +22,17 @@ Your Machine
     │                                │
     │  ┌──────────────────────────┐  │
     │  │  Docker: OpenClaw        │  │
-    │  │  Gateway :18789          │  │◄── Telegram Bot
+    │  │  Gateway :18789          │  │◄── Telegram / WhatsApp / etc.
     │  └──────────────────────────┘  │
     └────────────────────────────────┘
             │
-    Azure AI Foundry (separate RG)
-    GPT-4o deployment
+    Azure AI Foundry (separate resource group)
+    GPT-4o (or any deployed model)
 ```
 
 ---
 
-## Cost Estimate (West US 2)
+## Cost Estimate
 
 | Resource | ~Monthly Cost |
 |---|---|
@@ -42,8 +42,8 @@ Your Machine
 | Outbound bandwidth (< 5 GB) | ~$0 |
 | **Total** | **~$29/month** |
 
-> Stop the VM when not in use to save ~$24/month on compute.
-> `az vm deallocate --resource-group openclaw-rg --name openclaw-vm`
+> Stop the VM when not in use to save ~$24/month on compute:
+> `az vm deallocate -g <resource-group> -n <vm-name>`
 
 ---
 
@@ -62,12 +62,12 @@ If not installed: https://docs.microsoft.com/cli/azure/install-azure-cli
 ```bash
 az login --use-device-code
 ```
-Go to https://microsoft.com/devicelogin, enter the code shown, and sign in with your **Azure subscription account**.
+Go to https://microsoft.com/devicelogin, enter the code shown, and sign in with your Azure subscription account.
+
 If you have multiple tenants, specify yours:
 ```bash
 az login --tenant <your-tenant-id> --use-device-code
 ```
-Verify you see your subscription listed after login.
 
 ### 3. SSH Key
 
@@ -79,19 +79,19 @@ If none exists, generate one:
 ```bash
 ssh-keygen -t ed25519 -C "openclaw"
 ```
-Get the contents to paste into `parameters.json`:
+Get the public key contents (you'll paste this into `parameters.json`):
 ```bash
 cat ~/.ssh/id_ed25519.pub   # or id_rsa.pub if you used RSA
 ```
 
-### 4. Your Public IP (for NSG security rule)
+### 4. Your Public IP (for firewall rule)
 
 ```bash
 curl -4 ifconfig.me
 ```
-This restricts SSH access to only your machine. Add `/32` to the result (e.g. `203.0.113.10/32`).
+This restricts SSH access to only your machine. You'll add `/32` to the result (e.g. `203.0.113.10/32`).
 
-> **Note:** Your home IP may change occasionally (ISP dynamic IP). If you get locked out, update the NSG rule in Azure Portal or run `./scripts/deploy.sh` again with the new IP.
+> **Note:** If your home IP changes (dynamic ISP), update the NSG rule in Azure Portal or redeploy with the new IP.
 
 ### 5. Azure AI Foundry Keys
 
@@ -99,51 +99,66 @@ This restricts SSH access to only your machine. Add `/32` to the result (e.g. `2
 2. Navigate to your **Azure AI Foundry** resource
 3. Click **Keys and Endpoint** in the left menu
 4. Copy **Key 1** and the **Endpoint URL**
-5. Note your **GPT-4o deployment name** (under Deployments)
+5. Note your model **deployment name** (under Deployments)
 
-### 6. Telegram Bot Token
+### 6. Telegram Bot Token (or other channel)
 
 1. Open Telegram and search for `@BotFather`
-2. Send `/newbot`
-3. Follow the prompts — choose a name and username for your bot
-4. BotFather will give you a token like `123456789:AABBcc...`
-5. Copy that token for `.env`
+2. Send `/newbot` and follow the prompts
+3. BotFather will give you a token like `123456789:AABBcc...`
+4. Copy that token — you'll paste it into `.env`
 
 ---
 
 ## Deployment Steps
 
-### 1. Configure parameters
+### 1. Clone this repo
+
+```bash
+git clone https://github.com/Emrullah007/openclaw-azure.git
+cd openclaw-azure
+chmod +x scripts/*.sh
+```
+
+### 2. Configure parameters
 
 ```bash
 cp infra/parameters.example.json infra/parameters.json
 ```
 
-Edit `infra/parameters.json`:
+Edit `infra/parameters.json` and fill in:
 - `sshPublicKey`: full contents of your `~/.ssh/id_ed25519.pub` (or `id_rsa.pub`)
-- `allowedSshSourceIp`: your IP from `curl -4 ifconfig.me` + `/32`
+- `allowedSshSourceIp`: your IP from `curl -4 ifconfig.me` + `/32` (e.g. `203.0.113.10/32`)
 
 > `parameters.json` is gitignored — it will never be committed to GitHub.
 
-### 2. Configure environment
+### 3. Configure environment
 
 ```bash
 cp docker/.env.example docker/.env
 ```
 
-Edit `docker/.env` with your Azure AI Foundry keys and Telegram bot token.
+Edit `docker/.env` and fill in:
+- `AZURE_API_BASE`: your Azure AI Foundry endpoint URL
+- `AZURE_API_KEY`: your Azure AI Foundry key
+- `AZURE_DEPLOYMENT_NAME`: your GPT-4o (or other) deployment name
+- `OPENCLAW_MODEL`: `azure/<your-deployment-name>`
+- `TELEGRAM_BOT_TOKEN`: your Telegram bot token (or other channel)
+- `OPENCLAW_CONFIG_DIR` / `OPENCLAW_WORKSPACE_DIR`: update `<admin-username>` to match what you'll choose in the next step
 
-### 3. Deploy Azure infrastructure
+> `docker/.env` is gitignored — it will never be committed to GitHub.
+
+### 4. Deploy Azure infrastructure
 
 ```bash
-chmod +x scripts/*.sh
 ./scripts/deploy.sh
 ```
 
-The script will interactively ask you to:
-- Select a region (with estimated monthly cost shown)
+The script interactively asks you to:
+- Select a region (with estimated monthly cost)
 - Name your resource group (default: `openclaw-rg`)
-- Choose a VM name — it checks DNS availability automatically and re-prompts if taken
+- Choose a VM name — checks DNS availability and re-prompts if taken
+- Choose an admin username (default: `azureuser`)
 - Confirm before deploying
 
 Deployment takes ~3 minutes. At the end you'll see:
@@ -159,17 +174,17 @@ Deployment takes ~3 minutes. At the end you'll see:
 ╚══════════════════════════════════════════════════╝
 ```
 
-> Your VM IP and name are saved to `.deployment-info` (gitignored).
+> VM IP and deployment details are saved to `.deployment-info` (gitignored).
 
-### 4. Initialize the VM
+### 5. Initialize the VM
 
 ```bash
-./scripts/setup-vm.sh 20.x.x.x   # use your actual VM IP from step 3
+./scripts/setup-vm.sh
 ```
 
-This SSHes into the VM and automatically:
+Reads the VM IP and username from `.deployment-info` automatically. This SSHes into the VM and:
 - Updates all system packages
-- Installs Docker (v29+) and Docker Compose
+- Installs Docker (via official apt repo) and Docker Compose
 - Configures UFW firewall (deny all inbound except SSH)
 - Enables fail2ban (brute force protection)
 - Enables automatic security updates
@@ -177,20 +192,24 @@ This SSHes into the VM and automatically:
 
 At the end you'll see a security summary confirming all layers are active.
 
-### 5. Install OpenClaw on the VM
+### 6. Install OpenClaw on the VM
 
-**5a. Clone OpenClaw** — SSH into the VM and clone the repo:
+**6a.** SSH into the VM:
 ```bash
-ssh <admin-username>@20.x.x.x   # username chosen during deploy, default: azureuser
+ssh <admin-username>@<vm-ip>
+```
+
+**6b.** Clone OpenClaw:
+```bash
 git clone https://github.com/openclaw/openclaw.git ~/openclaw
 ```
 
-**5b. Copy your `.env`** — run this on your **local machine**:
+**6c.** Copy your `.env` — run this on your **local machine**:
 ```bash
-scp docker/.env <admin-username>@20.x.x.x:~/openclaw/.env
+scp docker/.env <admin-username>@<vm-ip>:~/openclaw/.env
 ```
 
-**5c. Run OpenClaw setup** — back on the VM:
+**6d.** Run OpenClaw setup — back on the VM:
 ```bash
 cd ~/openclaw
 ./scripts/docker/setup.sh
@@ -198,27 +217,28 @@ cd ~/openclaw
 
 This builds the Docker image and starts the OpenClaw gateway.
 
-### 6. Access the Gateway
+### 7. Access the Gateway
 
 The gateway only listens on localhost (not exposed to the internet). Access it via SSH tunnel from your local machine:
 
 ```bash
-ssh -L 18789:localhost:18789 <admin-username>@20.x.x.x
+ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
 ```
 
-Then open `http://localhost:18789` in your browser. You'll see the OpenClaw web UI.
+Then open `http://localhost:18789` in your browser.
 
 ---
 
-## Azure AI Foundry Model Configuration
+## Azure AI Foundry Configuration
 
-In `docker/.env`, set:
+In `docker/.env`:
 
 ```env
-AZURE_API_BASE=https://YOUR-RESOURCE.openai.azure.com
+AZURE_API_BASE=https://your-resource.openai.azure.com
 AZURE_API_KEY=your-key
 AZURE_API_VERSION=2024-02-01
-OPENCLAW_MODEL=azure/gpt-4o   # must match your deployment name
+AZURE_DEPLOYMENT_NAME=gpt-4o
+OPENCLAW_MODEL=azure/gpt-4o
 ```
 
 In `~/.openclaw/config/openclaw.json` on the VM:
@@ -240,16 +260,17 @@ In `~/.openclaw/config/openclaw.json` on the VM:
 | Start VM | `az vm start -g <resource-group> -n <vm-name>` |
 | SSH in | `ssh <admin-username>@<vm-ip>` |
 | Gateway tunnel | `ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>` |
-| View logs | `ssh vm` → `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
+| View OpenClaw logs | on VM: `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
 | Teardown everything | `./scripts/destroy.sh` |
 
 ---
 
-## Security Notes
+## Security
 
-- SSH key authentication only (no passwords)
-- NSG allows only port 22 inbound (restrict to your IP)
-- UFW firewall on VM as second layer
-- fail2ban protects against SSH brute force
-- Gateway is NOT exposed publicly — SSH tunnel only
-- `.env` and `parameters.json` are gitignored
+- SSH key authentication only (no password login)
+- Azure NSG restricts port 22 to your IP only
+- UFW firewall on the VM as a second layer
+- fail2ban blocks SSH brute force attempts
+- Automatic OS security updates enabled
+- OpenClaw gateway is NOT exposed to the internet — SSH tunnel only
+- `docker/.env` and `infra/parameters.json` are gitignored and never committed
