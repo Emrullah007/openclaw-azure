@@ -36,6 +36,13 @@ if [ ! -f "$PARAMS_FILE" ]; then
   exit 1
 fi
 
+# Detect unfilled placeholders in parameters.json before touching Azure
+if grep -qE "your-public-key-here|YOUR_IP_ADDRESS" "$PARAMS_FILE"; then
+  echo -e "${RED}❌ infra/parameters.json still contains example placeholder values.${NC}"
+  echo "   Fill in sshPublicKey (your actual public key) and allowedSshSourceIp (your IP/32)."
+  exit 1
+fi
+
 # ── Azure login check ─────────────────────────────────────────
 echo -e "${CYAN}🔐 Checking Azure login...${NC}"
 az account show --output table 2>/dev/null || {
@@ -178,7 +185,7 @@ echo -e "${GREEN}║${NC}  SSH        : ssh $ADMIN_USERNAME@$PUBLIC_IP"
 echo -e "${GREEN}║${NC}  Tunnel     : ssh -L 18789:localhost:18789 $ADMIN_USERNAME@$PUBLIC_IP"
 echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "   Next step: ${CYAN}./scripts/setup-vm.sh${NC}"
+echo -e "   Next steps: ${CYAN}./scripts/setup-vm.sh${NC}  →  ${CYAN}./scripts/configure-openclaw.sh${NC}"
 echo ""
 
 # Save deployment info for other scripts to use

@@ -185,31 +185,26 @@ cp docker/.env.example docker/.env
 Open `docker/.env` and fill in your values:
 
 ```env
-# Your Azure AI Foundry Target URI
-AZURE_API_BASE=https://your-resource.services.ai.azure.com/api/projects/your-project/openai/v1
+# Standard Azure OpenAI endpoint:
+AZURE_API_BASE=https://<your-resource>.openai.azure.com/openai/v1
 
-# Your Azure AI Foundry API key
+# Your API key (from Azure Portal > your resource > Keys and Endpoint)
 AZURE_API_KEY=your-key-here
 
-# API version — check your Azure AI Foundry portal for the recommended version
-AZURE_API_VERSION=2024-12-01-preview
-
 # Your model deployment name exactly as set in Azure AI Foundry
-# Examples: gpt-4o, gpt-4.1, gpt-4.5-preview, or any custom name you gave it
+# Examples: gpt-4o, gpt-4.1, or any custom name you gave it
 AZURE_DEPLOYMENT_NAME=your-deployment-name
-
-# Must match AZURE_DEPLOYMENT_NAME above, prefixed with "azure/"
-OPENCLAW_MODEL=azure/your-deployment-name
 
 # Your Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN=123456789:your-token-here
 
 # Update <admin-username> to match the username you will choose in Step 4
-OPENCLAW_CONFIG_DIR=/home/<admin-username>/.openclaw/config
 OPENCLAW_WORKSPACE_DIR=/home/<admin-username>/.openclaw/workspace
 ```
 
 > `docker/.env` is listed in `.gitignore` and will never be committed to GitHub.
+
+> **Azure AI Foundry vs Azure OpenAI:** The standard Azure OpenAI endpoint (`*.openai.azure.com/openai/v1`) works out of the box. If you are using the newer Azure AI Foundry project-based endpoint (`*.services.ai.azure.com/api/projects/...`), use that URL instead — both formats are supported.
 
 ### Step 4 — Deploy Azure infrastructure
 
@@ -260,49 +255,82 @@ When complete, you will see a security summary:
    ✔ Docker installed via official apt repo (pinned, auditable)
 ```
 
-### Step 6 — Copy your configuration to the VM
+### Step 6 — Configure and start OpenClaw
 
 Run this on your **local machine**:
 
 ```bash
-scp docker/.env <admin-username>@<vm-ip>:~/openclaw.env
+./scripts/configure-openclaw.sh
 ```
 
-This securely copies your `.env` file to the VM over SSH.
+This script SSHes into your VM and automatically:
 
-### Step 7 — Install and start OpenClaw
+1. Clones the OpenClaw repository
+2. Writes the AI model configuration to `~/.openclaw/openclaw.json`
+3. Builds the Docker image and starts the containers (~3–5 minutes)
+4. Prints a tokenized dashboard URL and all pairing commands
 
-SSH into the VM:
+When complete, you will see:
 
-```bash
-ssh <admin-username>@<vm-ip>
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  ✅  OpenClaw is running!                                        ║
+╠══════════════════════════════════════════════════════════════════╣
+║
+║  1. Open an SSH tunnel (keep this terminal open):
+║     ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
+║
+║  2. Open the dashboard in your browser:
+║     http://localhost:18789/#token=...
+║
+║  3. Click Connect — then approve the browser device (on the VM):
+║     ...
+║
+║  4. Pair Telegram — send /start to your bot, then (on the VM):
+║     ...
+║
+╚══════════════════════════════════════════════════════════════════╝
 ```
 
-Then run the following commands on the VM:
+### Step 7 — Open the dashboard
 
-```bash
-# Clone the official OpenClaw repository
-git clone https://github.com/openclaw/openclaw.git ~/openclaw
+Follow the output from Step 6:
 
-# Move your configuration file into place
-mv ~/openclaw.env ~/openclaw/.env
-
-# Run OpenClaw's official Docker setup script
-cd ~/openclaw
-./scripts/docker/setup.sh
-```
-
-OpenClaw's setup script builds the Docker image and starts the gateway. The first build takes approximately 3–5 minutes as it downloads and compiles dependencies.
-
-### Step 8 — Access the gateway
-
-The OpenClaw gateway runs on port 18789 but is bound to `localhost` only — it is not reachable from the internet. To access it from your browser, open a new terminal on your **local machine** and create an SSH tunnel:
+1. **Open the SSH tunnel** in a new terminal (keep it open):
 
 ```bash
 ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
 ```
 
-What this does: it tells SSH to forward traffic from `localhost:18789` on your machine through the encrypted SSH connection to `localhost:18789` on the VM. As long as this terminal is open, you can open `http://localhost:18789` in your browser and interact with OpenClaw securely.
+2. **Open the tokenized URL** printed by Step 6 in your browser. The URL includes a session token (`#token=...`) — use the exact URL from the script output, not the plain `http://localhost:18789`.
+
+3. **Approve your browser as a trusted device.** When you click Connect, OpenClaw registers your browser as a new device that must be approved. SSH into the VM and run:
+
+```bash
+# List pending device requests
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices list
+
+# Approve your device using the request ID shown
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices approve <request-id>
+```
+
+Your browser will automatically connect once approved.
+
+### Step 8 — Pair Telegram
+
+Send `/start` to your Telegram bot. It will reply with a pairing code. Then approve it on the VM:
+
+```bash
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli pairing approve telegram <code>
+```
+
+Your bot is now active. Send it any message and it will respond using your Azure AI model.
+
+> **Tip:** Add an alias on the VM to shorten these commands:
+> ```bash
+> alias oc='docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli'
+> # Then use: oc devices list | oc devices approve <id> | oc pairing approve telegram <code>
+> ```
 
 ---
 
@@ -313,9 +341,45 @@ What this does: it tells SSH to forward traffic from `localhost:18789` on your m
 | Stop VM (pause costs) | `az vm deallocate -g <resource-group> -n <vm-name>` |
 | Start VM | `az vm start -g <resource-group> -n <vm-name>` |
 | SSH into VM | `ssh <admin-username>@<vm-ip>` |
-| Open gateway in browser | `ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>` → open `http://localhost:18789` |
+| Open dashboard (SSH tunnel) | `ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>` |
+| Get dashboard URL with token | on VM: `docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open` |
+| Approve new device | on VM: `docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices list` then `devices approve <id>` |
 | View OpenClaw logs | on VM: `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
 | Full teardown | `./scripts/destroy.sh` |
+
+> **Reconnecting after VM restart:** after `az vm start`, SSH into the VM and run `docker compose -f ~/openclaw/docker-compose.yml up -d` if containers did not restart automatically. Then get a fresh dashboard URL with `dashboard --no-open` and approve your device again.
+
+---
+
+## Troubleshooting
+
+**Dashboard shows "unauthorized" or "origin not allowed"**
+
+You are likely opening `http://localhost:18789` directly. OpenClaw requires a token in the URL. Get the correct URL by running on the VM:
+
+```bash
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open
+```
+
+Copy the full URL (including `#token=...`) and open it in your browser.
+
+---
+
+**`docker: command not found` after `setup-vm.sh`**
+
+Your SSH session predates the Docker group assignment. Log out and back in, or use `sg docker -c "docker ..."` to run commands as the docker group without re-logging in.
+
+---
+
+**Azure AI onboarding wizard fails ("fetch failed" / "verification failed")**
+
+OpenClaw's built-in onboarding wizard does not natively support Azure AI. The `configure-openclaw.sh` script bypasses the wizard entirely by writing the config file directly — this is the correct approach for Azure deployments.
+
+---
+
+**VM becomes very slow or unresponsive**
+
+The `Standard_B2als_v2` is a burstable VM — it accumulates CPU credits when idle and spends them under load. If the container crash-loops for an extended period, credits are exhausted and the CPU is throttled to its baseline (~20%). Check **VM → Metrics → CPU Credits Remaining** in Azure Portal. Credits recover automatically once load drops. If the VM is completely unresponsive, use **Stop (Deallocate)** → **Start** for a cold reboot on a fresh host.
 
 ---
 

@@ -115,7 +115,7 @@ echo "✅ Automatic security updates enabled"
 
 # ── OpenClaw directory ────────────────────────────────────────
 echo "📁 Setting up OpenClaw directories..."
-mkdir -p ~/.openclaw/config ~/.openclaw/workspace
+mkdir -p ~/.openclaw/workspace
 
 echo ""
 echo "════════════════════════════════════════"
@@ -130,18 +130,13 @@ echo "   ✔ Azure NSG restricts SSH to your IP (cloud level)"
 echo "   ✔ Docker installed via official apt repo (pinned, auditable)"
 echo ""
 echo " Next steps:"
-echo "   1. Clone OpenClaw:  git clone https://github.com/openclaw/openclaw.git ~/openclaw"
-echo "   2. Copy .env file:  (run locally) scp docker/.env ${SETUP_USER}@<vm-ip>:~/openclaw/.env"
-echo "   3. Start OpenClaw:  cd ~/openclaw && ./scripts/docker/setup.sh"
-echo ""
-echo " Access gateway from your machine (SSH tunnel):"
-echo "   ssh -L 18789:localhost:18789 ${SETUP_USER}@<vm-ip>"
-echo "   Then open: http://localhost:18789"
+echo "   Run on your local machine: ./scripts/configure-openclaw.sh"
+echo "   This will clone OpenClaw, write the model config, build"
+echo "   the Docker image, and print your dashboard access URL."
 echo "════════════════════════════════════════"
 REMOTE_SCRIPT
 
 echo ""
 echo "✅ Remote setup complete on $VM_IP"
 echo ""
-echo "📋 Next: Copy your .env to the VM:"
-echo "   scp docker/.env ${SSH_USER}@${VM_IP}:~/openclaw/.env"
+echo -e "   Next step: \033[0;36m./scripts/configure-openclaw.sh\033[0m"

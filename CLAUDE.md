@@ -4,18 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Purpose
 
-Infrastructure-as-Code deployment of [OpenClaw](https://openclaw.ai/) (open-source personal AI assistant) on a single Azure VM. OpenClaw connects to messaging apps (Telegram, WhatsApp, etc.) and uses LLMs to execute real tasks. This project deploys it on Azure using the user's own Azure AI Foundry GPT-4o model.
+Infrastructure-as-Code deployment of [OpenClaw](https://openclaw.ai/) (open-source personal AI assistant) on a single Azure VM. OpenClaw connects to messaging apps (Telegram, WhatsApp, etc.) and uses LLMs to execute real tasks. This project deploys it on Azure using the user's own Azure AI model.
 
-**Budget target:** $20–30/month. Everything in one resource group (default: `openclaw-rg`) except the AI Foundry model (separate RG, pre-existing).
+**Budget target:** $20–30/month. Everything in one resource group (default: `openclaw-rg`) except the AI model (separate RG, pre-existing).
 
 ## Key Decisions
 
-- **Region:** `westus2` (West US 2 — closest to Seattle)
 - **VM size:** `Standard_B2als_v2` (2 vCPU, 4 GiB RAM, AMD) — meets OpenClaw's 2 GB minimum, ~$24/month
 - **IaC:** Azure Bicep (modular: `main.bicep` → `network.bicep` + `vm.bicep`)
-- **Deployment:** Docker via OpenClaw's own `./scripts/docker/setup.sh`
-- **Security:** Gateway bound to loopback only; access via SSH tunnel on port 18789
-- **LLM:** Azure AI Foundry GPT-4o, referenced as `azure/gpt-4o` in OpenClaw config
+- **Config:** OpenClaw model config is written directly to `~/.openclaw/openclaw.json` on the VM (not via the onboarding wizard — Azure AI is not natively supported there)
+- **Security:** Gateway bound to `lan` inside Docker; port 18789 exposed only via Docker port mapping; access via SSH tunnel
+- **LLM:** Azure OpenAI (`*.openai.azure.com/openai/v1`) using a custom provider in `openclaw.json`
+- **Dashboard access:** Requires a tokenized URL (`openclaw-cli dashboard --no-open`) and device pairing approval
 
 ## Repository Structure
 
@@ -30,26 +30,40 @@ docker/
   .env.example       # Template — copy to .env (gitignored)
 
 scripts/
-  deploy.sh          # az login → create RG → deploy Bicep
-  setup-vm.sh        # SSH into VM, installs Docker + security hardening
+  deploy.sh          # Interactive: region → RG → VM name → deploy Bicep
+  setup-vm.sh        # SSH into VM: installs Docker + security hardening
+  configure-openclaw.sh  # SSH into VM: clones OpenClaw, writes openclaw.json,
+                     #   builds image, starts containers, prints dashboard URL
   destroy.sh         # Deletes entire resource group (irreversible)
 ```
 
-## Common Commands
+## Deployment Pipeline
 
 ```bash
-# Deploy infrastructure
-az login
+# 1. Deploy Azure infrastructure (interactive)
 ./scripts/deploy.sh
 
-# Initialize VM after deploy
-./scripts/setup-vm.sh <vm-public-ip>
+# 2. Initialize VM (Docker + security hardening)
+./scripts/setup-vm.sh          # reads IP from .deployment-info
 
-# Access gateway via tunnel (run locally)
+# 3. Configure and start OpenClaw
+./scripts/configure-openclaw.sh  # reads .deployment-info + docker/.env
+
+# 4. Open SSH tunnel (keep terminal open)
 ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
 
+# 5. Get tokenized dashboard URL (on VM)
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open
+
+# 6. Approve browser device (on VM, after clicking Connect in browser)
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices list
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices approve <id>
+
+# 7. Pair Telegram (on VM, after sending /start to your bot)
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli pairing approve telegram <code>
+
 # Stop VM to save money
-az vm deallocate --resource-group <resource-group> --name <vm-name>
+az vm deallocate -g openclaw-rg -n openclaw-vm
 
 # Full teardown
 ./scripts/destroy.sh
@@ -57,14 +71,33 @@ az vm deallocate --resource-group <resource-group> --name <vm-name>
 
 ## Configuration Files (never commit)
 
-- `infra/parameters.json` — SSH public key, your IP for NSG, Azure region
-- `docker/.env` — Azure AI Foundry API keys, Telegram bot token, model name
+- `infra/parameters.json` — SSH public key, your IP for NSG
+- `docker/.env` — Azure API keys, Telegram bot token, deployment name
 
-## OpenClaw Architecture
+## OpenClaw Config on VM
 
-OpenClaw runs as a Docker container on the VM. Its gateway (`ws://localhost:18789`) is the control plane for channels (Telegram, WhatsApp, etc.), tool execution, and LLM calls. The OpenClaw repo is cloned to `~/openclaw` on the VM and started via `./scripts/docker/setup.sh`.
+Written by `configure-openclaw.sh` to `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "gateway": { "mode": "local", "controlUi": { "allowedOrigins": ["http://localhost:18789"] } },
+  "agents": { "defaults": { "model": { "primary": "my-model/<deployment-name>" } } },
+  "models": {
+    "providers": {
+      "my-model": {
+        "baseUrl": "https://<resource>.openai.azure.com/openai/v1",
+        "apiKey": "...",
+        "api": "openai-completions",
+        "models": [{ "id": "<deployment>", "name": "<deployment>" }]
+      }
+    }
+  },
+  "channels": { "telegram": { "botToken": "..." } }
+}
+```
 
 ## Cost Guardrails
 
 Stop the VM when not in use: `az vm deallocate -g openclaw-rg -n openclaw-vm`
 The main cost driver is compute (~$24/month running). Disk + IP = ~$5/month even when stopped.
+The `Standard_B2als_v2` is a burstable VM — avoid sustained CPU load (e.g. crash-looping containers) as it drains CPU credits and throttles performance.
