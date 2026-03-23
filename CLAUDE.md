@@ -80,7 +80,7 @@ Written by `configure-openclaw.sh` to `~/.openclaw/openclaw.json`:
 
 ```json
 {
-  "gateway": { "mode": "local", "controlUi": { "allowedOrigins": ["http://localhost:18789"] } },
+  "gateway": { "mode": "local", "controlUi": { "allowedOrigins": ["http://localhost:18789", "http://127.0.0.1:18789"] } },
   "agents": { "defaults": { "model": { "primary": "my-model/<deployment-name>" } } },
   "models": {
     "providers": {

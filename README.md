@@ -441,11 +441,18 @@ Azure capacity for `Standard_B2als_v2` varies by region. The deployment script d
 
 **Dashboard shows "origin not allowed" after clicking Connect**
 
-The dashboard URL printed by OpenClaw uses `127.0.0.1` but the gateway expects `localhost`. In your browser address bar, replace `127.0.0.1` with `localhost` — keep the `#token=...` part unchanged:
+Both `http://localhost:18789` and `http://127.0.0.1:18789` are allowed by the generated config, so either form of the URL should work. If you still see this error, your VM is likely running an older `openclaw.json` that only allows `localhost`. Fix it on the VM:
 
+```bash
+nano ~/.openclaw/openclaw.json
 ```
-http://localhost:18789/#token=...
+
+Update `allowedOrigins` to include both:
+```json
+"allowedOrigins": ["http://localhost:18789", "http://127.0.0.1:18789"]
 ```
+
+Then restart: `docker compose -f ~/openclaw/docker-compose.yml restart`
 
 ---
 
