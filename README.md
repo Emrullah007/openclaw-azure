@@ -222,7 +222,12 @@ OPENCLAW_WORKSPACE_DIR=/home/azureuser/.openclaw/workspace
 
 > `docker/.env` is listed in `.gitignore` and will never be committed to GitHub.
 
-> **Azure AI Foundry vs Azure OpenAI:** The standard Azure OpenAI endpoint (`*.openai.azure.com/openai/v1`) works out of the box. If you are using the newer Azure AI Foundry project-based endpoint (`*.services.ai.azure.com/api/projects/...`), use that URL instead — both formats are supported.
+> **Which URL to use:** Copy the "Target URI" from Azure Portal exactly, then make sure it ends with `/openai/v1`. Three formats are supported:
+> - Standard Azure OpenAI: `https://<resource>.openai.azure.com/openai/v1`
+> - Azure AI Foundry (resource-level): `https://<resource>.services.ai.azure.com/openai/v1`
+> - Azure AI Foundry (project-based): `https://<resource>.services.ai.azure.com/api/projects/<project>/openai/v1`
+>
+> **The URL must end with `/openai/v1`.** Using the bare domain without this path will result in HTTP 404 errors.
 
 ### Step 4 — Deploy Azure infrastructure
 
@@ -377,6 +382,23 @@ Your bot is now active. Send it any message and it will respond using your Azure
 ---
 
 ## Troubleshooting
+
+**HTTP 404: Resource not found / model_not_found**
+
+The `AZURE_API_BASE` URL is missing the `/openai/v1` path suffix, or the deployment name does not match. Check `~/.openclaw/openclaw.json` on the VM:
+
+```bash
+cat ~/.openclaw/openclaw.json
+```
+
+The `baseUrl` must end with `/openai/v1`, for example:
+```
+https://<your-resource>.services.ai.azure.com/openai/v1
+```
+
+Fix it with `nano ~/.openclaw/openclaw.json`, then `docker compose -f ~/openclaw/docker-compose.yml restart`. Also update `AZURE_API_BASE` in your local `docker/.env` to the correct value.
+
+---
 
 **VM size not available in selected region**
 
