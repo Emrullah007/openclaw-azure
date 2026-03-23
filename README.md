@@ -320,17 +320,21 @@ When complete, you will see:
 
 ### Step 7 — Open the dashboard
 
-Follow the output from Step 6:
-
-1. **Open the SSH tunnel** in a new terminal (keep it open):
+1. **Open the SSH tunnel** in a new terminal (keep it open). This command also gives you a shell on the VM:
 
 ```bash
 ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
 ```
 
-2. **Open the tokenized URL** printed by Step 6 in your browser. The URL includes a session token (`#token=...`) — use the exact URL from the script output, not the plain `http://localhost:18789`.
+2. **Get your tokenized dashboard URL.** Run this on the VM (in the same terminal from step 1):
 
-3. **Approve your browser as a trusted device.** When you click Connect, OpenClaw registers your browser as a new device that must be approved. SSH into the VM and run:
+```bash
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open
+```
+
+Copy the full URL it prints — it ends with `#token=...`. Open that exact URL in your browser. Do not open `http://localhost:18789` directly, it will show "unauthorized".
+
+3. **Approve your browser as a trusted device.** When you click Connect, OpenClaw registers your browser as a new device that must be approved. Run on the VM:
 
 ```bash
 # List pending device requests
