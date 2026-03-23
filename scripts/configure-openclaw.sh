@@ -60,6 +60,7 @@ AZURE_API_BASE="$(get_env_val AZURE_API_BASE)"
 AZURE_API_KEY="$(get_env_val AZURE_API_KEY)"
 AZURE_DEPLOYMENT_NAME="$(get_env_val AZURE_DEPLOYMENT_NAME)"
 TELEGRAM_BOT_TOKEN="$(get_env_val TELEGRAM_BOT_TOKEN)"
+# shellcheck disable=SC2034  # used via indirect ${!var} in placeholder detection loop below
 OPENCLAW_WORKSPACE_DIR="$(get_env_val OPENCLAW_WORKSPACE_DIR)"
 # Base64-encode the full .env so it can be passed as a single env var over SSH
 # and written verbatim to ~/openclaw/.env on the VM. tr strips the line wrapping
