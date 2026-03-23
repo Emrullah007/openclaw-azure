@@ -76,4 +76,3 @@ resource vnet 'Microsoft.Network/virtualNetworks@2023-09-01' = {
 // ── Outputs ──────────────────────────────────────────────────
 
 output subnetId string = vnet.properties.subnets[0].id
-output nsgId string = nsg.id

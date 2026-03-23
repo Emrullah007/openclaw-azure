@@ -23,6 +23,11 @@ az account show --output none 2>/dev/null || {
 if [ -f ".deployment-info" ]; then
   # shellcheck source=/dev/null
   source .deployment-info
+  # Validate the sourced value looks sane
+  if [ -z "${RESOURCE_GROUP:-}" ]; then
+    echo "❌ .deployment-info found but RESOURCE_GROUP is empty. Delete it and retry."
+    exit 1
+  fi
   echo "ℹ️  Loaded deployment info: resource group '$RESOURCE_GROUP'"
 else
   RESOURCE_GROUP="openclaw-rg"
@@ -46,6 +51,8 @@ az group delete \
   --name "$RESOURCE_GROUP" \
   --yes \
   --no-wait
+
+rm -f .deployment-info
 
 echo ""
 echo "✅ Deletion initiated. Azure is cleaning up in the background."

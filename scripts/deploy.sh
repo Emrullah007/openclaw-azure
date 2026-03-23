@@ -86,8 +86,10 @@ while true; do
 
   # Validate: 1-15 chars, lowercase letters/numbers/hyphens, must start with letter,
   # must not end with hyphen — satisfies both Azure DNS label and Linux hostname rules
-  if ! [[ "$VM_NAME" =~ ^[a-z][a-z0-9-]{0,13}[a-z0-9]$|^[a-z]$ ]]; then
-    echo -e "   ${RED}❌ Name must be 2-15 chars, start with a letter, end with a letter or number, hyphens allowed in between.${NC}"
+  # 3-15 chars, start with letter, end with letter/number, hyphens in middle only
+  # Satisfies both Azure DNS label (min 3 chars) and Linux hostname rules
+  if ! [[ "$VM_NAME" =~ ^[a-z][a-z0-9-]{1,13}[a-z0-9]$ ]]; then
+    echo -e "   ${RED}❌ Name must be 3-15 chars, start with a letter, end with a letter or number, hyphens allowed in between.${NC}"
     continue
   fi
 
