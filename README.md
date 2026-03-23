@@ -389,9 +389,19 @@ Azure capacity for `Standard_B2als_v2` varies by region. The deployment script d
 
 ---
 
-**Dashboard shows "unauthorized" or "origin not allowed"**
+**Dashboard shows "origin not allowed" after clicking Connect**
 
-You are likely opening `http://localhost:18789` directly. OpenClaw requires a token in the URL. Get the correct URL by running on the VM:
+The dashboard URL printed by OpenClaw uses `127.0.0.1` but the gateway expects `localhost`. In your browser address bar, replace `127.0.0.1` with `localhost` — keep the `#token=...` part unchanged:
+
+```
+http://localhost:18789/#token=...
+```
+
+---
+
+**Dashboard shows "unauthorized"**
+
+You are opening `http://localhost:18789` without a token. Get the correct URL by running on the VM:
 
 ```bash
 docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open

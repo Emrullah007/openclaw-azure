@@ -159,7 +159,7 @@ cat > "$HOME/.openclaw/openclaw.json" <<CONFIG
   "gateway": {
     "mode": "local",
     "controlUi": {
-      "allowedOrigins": ["http://localhost:18789"]
+      "allowedOrigins": ["http://localhost:18789", "http://127.0.0.1:18789"]
     }
   },
   "agents": {
