@@ -26,39 +26,34 @@ This repository is a **ready-to-use deployment package** for OpenClaw on Azure. 
 ## How It Works
 
 ```
-+----------------------------------------------------------+
-|  Your Local Machine                                      |
-|                                                          |
-|  $ ssh -L 18789:localhost:18789 <admin-username>@<vm-ip> |
-|            |                                             |
-|            |  SSH Tunnel (encrypted)                     |
-+------------|---------------------------------------------+
+  +----------------------+
+  |    Your Machine      |
+  |  (Browser + SSH)     |
+  +----------+-----------+
+             |
+             |  SSH Tunnel (port 18789)
              |
              v
-+----------------------------------------------------------+
-|  Azure Resource Group                                    |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |  Ubuntu 24.04 VM  (Standard_B2als_v2)              |  |
-|  |                                                    |  |
-|  |  +----------------------------------------------+  |  |
-|  |  |  Docker Container: OpenClaw                  |  |  |
-|  |  |                                              |  |  |
-|  |  |  Gateway  ws://localhost:18789        <---------+-----  Telegram Bot
-|  |  |  |- Session & channel management     |      |  |  |
-|  |  |  |- Tool execution (browser, shell)  |      |  |  |
-|  |  |  +- LLM calls ----------------------+       |  |  |
-|  |  +-------------------------------|-------------+  |  |
-|  +----------------------------------|----------------+  |
-|                                     |                   |
-+-------------------------------------|-------------------+
-                                      |
-                                      v
-                    +---------------------------------+
-                    |  Azure AI / AI Foundry          |
-                    |  (separate resource group)      |
-                    |  GPT-4o / custom model          |
-                    +---------------------------------+
++----------------------------------------------------+
+|  Azure VM  (Ubuntu 24.04, Standard_B2als_v2)       |
+|                                                    |
+|  +----------------------------------------------+  |
+|  |  OpenClaw  (Docker)                          |  |
+|  |                                              |  |
+|  |  Gateway  ws://localhost:18789               |  |<---> Telegram
+|  |  - Sessions & channel management             |  |
+|  |  - Tool execution  (browser, shell, files)   |  |
+|  |  - LLM calls                                 |  |
+|  +----------------------------+-----------------+  |
+|                               |                    |
++------------------------------ | -------------------+
+                                |
+                                v
+                   +------------------------+
+                   |  Azure AI / AI Foundry |
+                   |  (separate RG)         |
+                   |  GPT-4o / custom model |
+                   +------------------------+
 ```
 
 **Key design decisions:**
