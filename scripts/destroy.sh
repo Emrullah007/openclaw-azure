@@ -8,6 +8,17 @@
 
 set -euo pipefail
 
+# ── Pre-flight checks ─────────────────────────────────────────
+if ! command -v az &>/dev/null; then
+  echo "❌ Azure CLI not found. Install: https://docs.microsoft.com/cli/azure/install-azure-cli"
+  exit 1
+fi
+
+az account show --output none 2>/dev/null || {
+  echo "❌ Not logged in to Azure. Run: az login --use-device-code"
+  exit 1
+}
+
 # Read resource group from last deployment if available
 if [ -f ".deployment-info" ]; then
   # shellcheck source=/dev/null

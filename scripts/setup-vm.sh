@@ -3,19 +3,33 @@
 # OpenClaw — VM Initialization Script
 # Run this on your LOCAL machine after deploying the VM.
 # It SSHes into the VM and installs Docker + OpenClaw deps.
-# Usage: ./scripts/setup-vm.sh <vm-public-ip>
+# Usage: ./scripts/setup-vm.sh [vm-public-ip]
+# If no IP is given, reads from .deployment-info
 # ============================================================
 
 set -euo pipefail
 
-VM_IP="${1:?Usage: $0 <vm-public-ip>}"
-SSH_USER="azureuser"
+# ── Read deployment state ─────────────────────────────────────
+if [ -f ".deployment-info" ]; then
+  # shellcheck source=/dev/null
+  source .deployment-info
+fi
+
+VM_IP="${1:-${PUBLIC_IP:-}}"
+SSH_USER="${ADMIN_USERNAME:-azureuser}"
+
+if [ -z "$VM_IP" ]; then
+  echo "❌ No VM IP provided and no .deployment-info found."
+  echo "   Usage: $0 <vm-public-ip>"
+  exit 1
+fi
+
 SSH_OPTS=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30)
 
 echo "🔗 Connecting to $SSH_USER@$VM_IP..."
 
-# Run the full setup remotely via SSH heredoc
-ssh "${SSH_OPTS[@]}" "${SSH_USER}@${VM_IP}" bash <<'REMOTE_SCRIPT'
+# Pass SSH_USER into the remote script via environment
+ssh "${SSH_OPTS[@]}" "${SSH_USER}@${VM_IP}" "SETUP_USER=${SSH_USER} bash" <<'REMOTE_SCRIPT'
 set -euo pipefail
 
 echo ""
@@ -36,11 +50,23 @@ sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
   curl git ufw fail2ban unattended-upgrades \
   apt-transport-https ca-certificates gnupg lsb-release
 
-# ── Docker ────────────────────────────────────────────────────
+# ── Docker (via official apt repo — pinned, auditable) ────────
 echo "🐳 Installing Docker..."
 if ! command -v docker &>/dev/null; then
-  curl -fsSL https://get.docker.com | sudo sh
-  sudo usermod -aG docker "$USER"
+  # Add Docker's official GPG key and repo (avoids pipe-to-sh)
+  sudo install -m 0755 -d /etc/apt/keyrings
+  sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
+    -o /etc/apt/keyrings/docker.asc
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+  echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] \
+    https://download.docker.com/linux/ubuntu \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
+    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  sudo usermod -aG docker "${SETUP_USER}"
   echo "✅ Docker installed"
 else
   echo "✅ Docker already installed"
@@ -88,14 +114,15 @@ echo "   ✔ UFW firewall active (deny all inbound except SSH)"
 echo "   ✔ fail2ban active (blocks brute force)"
 echo "   ✔ Automatic security updates enabled"
 echo "   ✔ Azure NSG restricts SSH to your IP (cloud level)"
+echo "   ✔ Docker installed via official apt repo (pinned, auditable)"
 echo ""
 echo " Next steps:"
 echo "   1. Clone OpenClaw:  git clone https://github.com/openclaw/openclaw.git ~/openclaw"
-echo "   2. Copy .env file:  (run locally) scp docker/.env azureuser@<vm-ip>:~/openclaw/.env"
+echo "   2. Copy .env file:  (run locally) scp docker/.env ${SETUP_USER}@<vm-ip>:~/openclaw/.env"
 echo "   3. Start OpenClaw:  cd ~/openclaw && ./scripts/docker/setup.sh"
 echo ""
 echo " Access gateway from your machine (SSH tunnel):"
-echo "   ssh -L 18789:localhost:18789 azureuser@<vm-ip>"
+echo "   ssh -L 18789:localhost:18789 ${SETUP_USER}@<vm-ip>"
 echo "   Then open: http://localhost:18789"
 echo "════════════════════════════════════════"
 REMOTE_SCRIPT

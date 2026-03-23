@@ -84,9 +84,10 @@ while true; do
   read -p "   Enter VM name [openclaw-vm]: " VM_NAME
   VM_NAME="${VM_NAME:-openclaw-vm}"
 
-  # Validate: lowercase letters, numbers, hyphens only
-  if ! [[ "$VM_NAME" =~ ^[a-z0-9-]+$ ]]; then
-    echo -e "   ${RED}❌ Name must contain only lowercase letters, numbers, and hyphens.${NC}"
+  # Validate: 1-15 chars, lowercase letters/numbers/hyphens, must start with letter,
+  # must not end with hyphen — satisfies both Azure DNS label and Linux hostname rules
+  if ! [[ "$VM_NAME" =~ ^[a-z][a-z0-9-]{0,13}[a-z0-9]$|^[a-z]$ ]]; then
+    echo -e "   ${RED}❌ Name must be 2-15 chars, start with a letter, end with a letter or number, hyphens allowed in between.${NC}"
     continue
   fi
 
