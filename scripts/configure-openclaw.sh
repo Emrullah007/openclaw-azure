@@ -80,17 +80,25 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 1
 fi
 
-# Detect unfilled placeholders (catches tutorial values like your-key-here or <your-resource>)
+# Detect unfilled placeholders — match exact example values from .env.example only,
+# not broad patterns that could reject legitimate resource or deployment names.
 placeholder_found=0
-for var in AZURE_API_BASE AZURE_API_KEY AZURE_DEPLOYMENT_NAME TELEGRAM_BOT_TOKEN OPENCLAW_WORKSPACE_DIR; do
+declare -A PLACEHOLDER_VALS=(
+  [AZURE_API_BASE]="https://<your-resource>.openai.azure.com/openai/v1"
+  [AZURE_API_KEY]="your-azure-api-key-here"
+  [AZURE_DEPLOYMENT_NAME]="your-deployment-name"
+  [TELEGRAM_BOT_TOKEN]="123456789:AABBccDDeeffGGhhIIjjKKllMMnnOOppQQrr"
+  [OPENCLAW_WORKSPACE_DIR]="/home/<admin-username>/.openclaw/workspace"
+)
+for var in "${!PLACEHOLDER_VALS[@]}"; do
   val="${!var}"
-  if [[ "$val" == *"your-"* ]] || [[ "$val" == *"<"* ]] || [[ "$val" == *"placeholder"* ]]; then
-    echo -e "${RED}❌ $var looks like an unfilled placeholder: $val${NC}"
+  if [[ "$val" == "${PLACEHOLDER_VALS[$var]}" ]]; then
+    echo -e "${RED}❌ $var still contains the example placeholder value.${NC}"
+    echo -e "   Update docker/.env with your real value before running this script."
     placeholder_found=1
   fi
 done
 if [ "$placeholder_found" -eq 1 ]; then
-  echo "   Update docker/.env with your real values before running this script."
   exit 1
 fi
 
