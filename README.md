@@ -24,7 +24,7 @@ This repository gives you everything you need to deploy OpenClaw on a single Azu
 ┌─────────────────────────────────────────────────────────┐
 │  Your Local Machine                                     │
 │                                                         │
-│  $ ssh -L 18789:localhost:18789 <admin>@<vm-ip>         │
+│  $ ssh -L 18789:localhost:18789 <admin-username>@<vm-ip> │
 │         │                                               │
 │         │  SSH Tunnel (encrypted)                       │
 └─────────┼───────────────────────────────────────────────┘
@@ -58,7 +58,7 @@ This repository gives you everything you need to deploy OpenClaw on a single Azu
 
 **Key design decisions:**
 
-- **Gateway is never publicly exposed.** Port 18789 is bound to localhost only. You access it from your browser via an encrypted SSH tunnel — this means no credentials or traffic are ever sent over the open internet.
+- **Gateway is never publicly exposed.** Port 18789 is bound inside Docker and not reachable from the internet. You access it from your browser via an encrypted SSH tunnel — this means no credentials or traffic are ever sent over the open internet.
 - **Everything lives in one resource group.** Tear it all down with one command, redeploy from scratch with another.
 - **Your AI model stays yours.** OpenClaw calls your own Azure AI Foundry deployment — your data does not go through any third-party AI service you have not already authorized.
 
@@ -165,14 +165,16 @@ Open `infra/parameters.json` and fill in your values:
 {
   "parameters": {
     "sshPublicKey": {
-      "value": "ssh-ed25519 AAAA... you@yourmachine"
+      "value": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA... your-username@your-machine"
     },
     "allowedSshSourceIp": {
-      "value": "203.0.113.10/32"
+      "value": "12.34.56.78/32"
     }
   }
 }
 ```
+
+> Replace `12.34.56.78` with your actual public IP (run `curl -4 ifconfig.me` to find it). The `/32` means "this exact IP only".
 
 > `parameters.json` is listed in `.gitignore` and will never be committed to GitHub.
 
@@ -394,7 +396,7 @@ Every layer of this deployment is hardened by default:
 | **UFW firewall** | A second firewall layer on the VM itself |
 | **fail2ban** | Automatically bans IPs that repeatedly fail SSH authentication |
 | **Automatic OS updates** | Security patches are applied without manual intervention |
-| **Loopback-only gateway** | Port 18789 is not reachable from the internet — SSH tunnel only |
+| **Docker-internal gateway** | Port 18789 is not reachable from the internet — SSH tunnel only |
 | **Gitignored secrets** | `.env` and `parameters.json` are never committed to version control |
 
 ---
