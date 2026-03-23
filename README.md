@@ -339,7 +339,7 @@ docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices li
 docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices approve <request-id>
 ```
 
-Your browser will automatically connect once approved.
+After approving, **refresh the browser** — it will not auto-connect, you need to reload the page.
 
 ### Step 8 — Pair Telegram
 
