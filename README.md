@@ -1,24 +1,29 @@
 # OpenClaw on Azure
 
-> Deploy your own personal AI assistant on Azure — private, secure, and fully under your control.
+[![CI](https://github.com/Emrullah007/openclaw-azure/actions/workflows/shell-lint.yml/badge.svg)](https://github.com/Emrullah007/openclaw-azure/actions/workflows/shell-lint.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-[OpenClaw](https://openclaw.ai/) is an open-source personal AI assistant that connects to the messaging apps you already use (Telegram, WhatsApp, Discord, and more) and executes real tasks on your behalf — managing emails, checking calendars, browsing the web, running shell commands, and much more.
+> Deploy your own private AI assistant on Azure in under 30 minutes — no cloud AI subscriptions, no data leaving your control.
 
-This repository gives you everything you need to deploy OpenClaw on a single Azure VM, powered by your own Azure AI Foundry model (GPT-4o or any other deployed model). When you are done experimenting, you can stop the VM to pause costs — or destroy everything with a single command and redeploy from scratch whenever you want.
+[OpenClaw](https://openclaw.ai/) is an open-source personal AI assistant that connects to the messaging apps you already use — Telegram, WhatsApp, Discord, and more — and executes real tasks on your behalf: browsing the web, running shell commands, managing files, and anything else you configure it to do.
 
----
-
-## What You Will Learn
-
-- Provisioning Azure infrastructure with **Bicep** (Azure's native Infrastructure-as-Code language)
-- Deploying and securing a **Linux VM** on Azure
-- Running a self-hosted AI assistant using **Docker**
-- Connecting your own **Azure AI Foundry** model to an open-source project
-- Accessing private services securely using **SSH tunnels**
+This repository is a **ready-to-use deployment package** for OpenClaw on Azure. You get three scripts that take you from zero to a fully running, hardened deployment — including infrastructure provisioning, VM security setup, and OpenClaw configuration — with no manual cloud console steps required.
 
 ---
 
-## Architecture
+## What You Get
+
+- **One-command infrastructure** — a single script provisions the VM, networking, and firewall on Azure using Bicep (Azure's native Infrastructure-as-Code language)
+- **Hardened out of the box** — SSH key auth only, UFW firewall, fail2ban, automatic security updates, and an NSG that restricts SSH to your IP address
+- **Automated OpenClaw setup** — the configuration script handles cloning, model config, Docker build, and startup; it prints your dashboard URL and pairing commands when done
+- **Your model, your data** — connects to your own Azure AI deployment (Azure OpenAI or Azure AI Foundry); your conversations never touch a third-party AI service you haven't already authorized
+- **Cost-conscious defaults** — `Standard_B2als_v2` VM (~$22–27/month running); stop the VM when not in use to pause compute costs
+
+**Estimated cost:** $22–27/month running · ~$5/month stopped (disk + IP only)
+
+---
+
+## How It Works
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -50,7 +55,7 @@ This repository gives you everything you need to deploy OpenClaw on a single Azu
                                     │
                                     ▼
                     ┌───────────────────────────┐
-                    │  Azure AI Foundry         │
+                    │  Azure AI / AI Foundry    │
                     │  (separate resource group)│
                     │  GPT-4o / custom model    │
                     └───────────────────────────┘
@@ -58,9 +63,21 @@ This repository gives you everything you need to deploy OpenClaw on a single Azu
 
 **Key design decisions:**
 
-- **Gateway is never publicly exposed.** Port 18789 is bound inside Docker and not reachable from the internet. You access it from your browser via an encrypted SSH tunnel — this means no credentials or traffic are ever sent over the open internet.
+- **Gateway is never publicly exposed.** Port 18789 is bound inside Docker and not reachable from the internet. You access it from your browser via an encrypted SSH tunnel — no credentials or traffic are ever sent over the open internet.
 - **Everything lives in one resource group.** Tear it all down with one command, redeploy from scratch with another.
-- **Your AI model stays yours.** OpenClaw calls your own Azure AI Foundry deployment — your data does not go through any third-party AI service you have not already authorized.
+- **Your AI model stays yours.** OpenClaw calls your own Azure AI deployment — your data does not go through any third-party AI service you have not already authorized.
+
+---
+
+## What You Will Learn
+
+If you are using this as a learning exercise, this project covers:
+
+- Provisioning Azure infrastructure with **Bicep** (Azure's native Infrastructure-as-Code language)
+- Deploying and hardening a **Linux VM** on Azure
+- Running a self-hosted AI assistant using **Docker Compose**
+- Connecting an open-source project to your own **Azure AI** model
+- Accessing private services securely using **SSH tunnels**
 
 ---
 
@@ -111,12 +128,6 @@ cat ~/.ssh/id_ed25519.pub   # if you generated a new key above
 cat ~/.ssh/id_rsa.pub       # if you already had an RSA key
 ```
 
-Not sure which one you have? This lists all your public keys:
-
-```bash
-ls ~/.ssh/*.pub
-```
-
 ### 4. Your Public IP Address
 
 This is used to lock down SSH access so only your machine can connect to the VM.
@@ -131,10 +142,10 @@ Copy this value — you will paste it into `infra/parameters.json` as `allowedSs
 
 > **Tip:** Home internet IPs can change occasionally. If you ever get locked out of your VM, update the NSG (Network Security Group) rule in Azure Portal with your new IP.
 
-### 5. Azure AI Foundry Keys
+### 5. Azure AI Keys
 
 1. Go to [Azure Portal](https://portal.azure.com)
-2. Open your **Azure AI Foundry** resource
+2. Open your **Azure OpenAI** or **Azure AI Foundry** resource
 3. Click **Keys and Endpoint** in the left menu
 4. Copy **Key 1** and the **Target URI**
 5. Note the exact **deployment name** of your model (found under Deployments)
@@ -203,13 +214,14 @@ AZURE_API_BASE=https://<your-resource>.openai.azure.com/openai/v1
 AZURE_API_KEY=your-key-here
 
 # Your model deployment name exactly as set in Azure AI Foundry
-# Examples: gpt-4o, gpt-4.1, or any custom name you gave it
-AZURE_DEPLOYMENT_NAME=your-deployment-name
+# Examples: gpt-4o, gpt-4.1, my-gpt4o-deployment
+AZURE_DEPLOYMENT_NAME=gpt-4o
 
 # Your Telegram bot token from @BotFather
 TELEGRAM_BOT_TOKEN=123456789:your-token-here
 
-# The default admin username is azureuser — change only if you pick a different one in Step 4
+# Workspace path on the VM — update <admin-username> if you chose a custom username in Step 4
+# Default admin username is azureuser, so the default path below is correct for most users
 OPENCLAW_WORKSPACE_DIR=/home/azureuser/.openclaw/workspace
 ```
 
@@ -225,10 +237,10 @@ OPENCLAW_WORKSPACE_DIR=/home/azureuser/.openclaw/workspace
 
 This interactive script will guide you through:
 
-1. **Region selection** — choose the Azure region closest to you
+1. **Region selection** — choose the Azure region closest to you (East US is the default and most reliably available)
 2. **Resource group name** — press Enter to use the default `openclaw-rg`
-3. **VM name** — the script automatically checks if the DNS name is available and prompts you to try another if it is taken
-4. **Admin username** — press Enter for the default `azureuser`
+3. **VM name** — the script checks DNS availability and prompts you to try another name if taken
+4. **Admin username** — press Enter for the default `azureuser`, or choose your own
 5. **Confirmation** — review your choices, then confirm to deploy
 
 Deployment takes approximately 3 minutes. When complete, you will see:
@@ -238,13 +250,15 @@ Deployment takes approximately 3 minutes. When complete, you will see:
 ║  ✅  Deployment complete!                        ║
 ╠══════════════════════════════════════════════════╣
 ║  Public IP  : 20.x.x.x
-║  DNS        : your-vm-name.westus2.cloudapp.azure.com
+║  DNS        : your-vm-name.eastus.cloudapp.azure.com
 ║  SSH        : ssh <admin-username>@20.x.x.x
 ║  Tunnel     : ssh -L 18789:localhost:18789 <admin-username>@20.x.x.x
 ╚══════════════════════════════════════════════════╝
 ```
 
 > Your VM's IP address and deployment details are automatically saved to `.deployment-info` (gitignored) so the next scripts can read them without you having to type them again.
+
+> **VM size not available?** If the selected region is at capacity, the script will detect this and offer to retry with a different region — no need to start over.
 
 ### Step 5 — Initialize and harden the VM
 
@@ -278,8 +292,9 @@ This script SSHes into your VM and automatically:
 
 1. Clones the OpenClaw repository
 2. Writes the AI model configuration to `~/.openclaw/openclaw.json`
-3. Builds the Docker image and starts the containers (~3–5 minutes)
-4. Prints a tokenized dashboard URL and all pairing commands
+3. Copies your `.env` to the VM so Docker Compose picks up workspace settings
+4. Builds the Docker image and starts the containers (~3–5 minutes)
+5. Prints a tokenized dashboard URL and all pairing commands
 
 When complete, you will see:
 
@@ -364,6 +379,12 @@ Your bot is now active. Send it any message and it will respond using your Azure
 
 ## Troubleshooting
 
+**VM size not available in selected region**
+
+Azure capacity for `Standard_B2als_v2` varies by region. The deployment script detects this automatically and offers to retry with a different region. East US (Virginia) typically has the best availability.
+
+---
+
 **Dashboard shows "unauthorized" or "origin not allowed"**
 
 You are likely opening `http://localhost:18789` directly. OpenClaw requires a token in the URL. Get the correct URL by running on the VM:
@@ -418,6 +439,26 @@ To permanently delete all Azure resources and stop all costs:
 ./scripts/destroy.sh
 ```
 
-The script will ask you to type the resource group name to confirm before deleting anything. Your Azure AI Foundry model lives in a separate resource group and will not be affected.
+The script will ask you to type the resource group name to confirm before deleting anything. Your Azure AI model lives in a separate resource group and will not be affected.
 
 To redeploy from scratch later, start again from Step 4.
+
+---
+
+## Contributing
+
+Found a bug or have a suggestion? [Open an issue](https://github.com/Emrullah007/openclaw-azure/issues) — feedback is welcome.
+
+Pull requests are also welcome. For significant changes, please open an issue first to discuss what you would like to change.
+
+---
+
+## Disclaimer
+
+This project is an independent, community-maintained deployment package. It is not affiliated with or endorsed by the OpenClaw project or its maintainers. OpenClaw itself is developed and maintained separately at [openclaw.ai](https://openclaw.ai/).
+
+---
+
+## License
+
+[MIT](LICENSE)
