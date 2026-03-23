@@ -145,6 +145,25 @@ read -p "   Proceed with deployment? [Y/n]: " CONFIRM
 CONFIRM="${CONFIRM:-Y}"
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || { echo "Aborted."; exit 0; }
 
+# ── SKU availability check ────────────────────────────────────
+echo ""
+echo -e "${CYAN}🔍 Checking VM size availability in $LOCATION...${NC}"
+SKU_CHECK=$(az vm list-skus \
+  --location "$LOCATION" \
+  --size Standard_B2als_v2 \
+  --query "[?restrictions[?reasonCode=='NotAvailableForSubscription' || reasonCode=='NotAvailableForRegion']] | length(@)" \
+  --output tsv 2>/dev/null || echo "unknown")
+
+if [ "$SKU_CHECK" = "unknown" ]; then
+  echo -e "   ${YELLOW}⚠ Could not verify VM size availability — proceeding anyway.${NC}"
+elif [ "$SKU_CHECK" -gt 0 ] 2>/dev/null; then
+  echo -e "   ${RED}❌ Standard_B2als_v2 is not available in $LOCATION due to capacity restrictions.${NC}"
+  echo -e "   Try a different region. East US (Virginia) typically has the best availability."
+  exit 1
+else
+  echo -e "   ${GREEN}✔ Standard_B2als_v2 is available in $LOCATION${NC}"
+fi
+
 # ── Create Resource Group ─────────────────────────────────────
 echo ""
 echo -e "${CYAN}📦 Creating resource group: $RESOURCE_GROUP in $LOCATION...${NC}"
