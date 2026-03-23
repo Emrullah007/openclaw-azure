@@ -178,7 +178,7 @@ echo -e "${GREEN}║${NC}  SSH        : ssh $ADMIN_USERNAME@$PUBLIC_IP"
 echo -e "${GREEN}║${NC}  Tunnel     : ssh -L 18789:localhost:18789 $ADMIN_USERNAME@$PUBLIC_IP"
 echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "   Next step: ${CYAN}./scripts/setup-vm.sh $PUBLIC_IP${NC}"
+echo -e "   Next step: ${CYAN}./scripts/setup-vm.sh${NC}"
 echo ""
 
 # Save deployment info for other scripts to use
