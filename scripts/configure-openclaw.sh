@@ -226,7 +226,7 @@ sleep 3
 
 RAW_URL=$(sg docker -c \
   "docker compose -f $HOME/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open" \
-  2>/dev/null | grep -Eo 'http[s]?://[^ ]+' | head -1)
+  2>/dev/null | grep -Eo 'http[s]?://[^ ]+' | head -1 || true)
 
 # Replace 127.0.0.1 with localhost so the URL works via SSH tunnel
 TOKENIZED_URL="${RAW_URL/127.0.0.1/localhost}"
