@@ -377,9 +377,40 @@ Your bot is now active. Send it any message and it will respond using your Azure
 | View OpenClaw logs | on VM: `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
 | Full teardown | `./scripts/destroy.sh` |
 
-> **Reconnecting after VM restart:** after `az vm start`, SSH into the VM and run `docker compose -f ~/openclaw/docker-compose.yml up -d` if containers did not restart automatically. Then get a fresh dashboard URL with `dashboard --no-open` and approve your device again. Telegram pairing survives restarts.
->
-> **After a full teardown and redeploy** (running `destroy.sh` + starting from Step 4): all pairings are lost because the container data does not persist across deployments. You will need to re-pair your browser (Steps 7) and re-pair Telegram (Step 8) on the new VM. Make sure your `docker/.env` has the correct bot token before running `configure-openclaw.sh`.
+### Reconnecting to the dashboard
+
+Every time you come back to OpenClaw (after a VM restart or a new SSH session), follow these steps:
+
+**1. Start the VM if it was stopped:**
+```bash
+az vm start -g <resource-group> -n <vm-name>
+```
+
+**2. Open the SSH tunnel** (also gives you a VM shell):
+```bash
+ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
+```
+
+**3. Make sure containers are running** (run on the VM):
+```bash
+docker compose -f ~/openclaw/docker-compose.yml up -d
+```
+
+**4. Get a fresh tokenized dashboard URL** (run on the VM):
+```bash
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli dashboard --no-open
+```
+
+**5. Open the URL in your browser.** If you see "pairing required", approve your device:
+```bash
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices list
+docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli devices approve <id>
+```
+Then refresh the browser.
+
+> **VM restart vs full redeploy:**
+> - **VM restart** (`az vm stop` / `az vm start`): Telegram pairing survives. You only need a fresh dashboard URL and possibly device re-approval.
+> - **Full redeploy** (`destroy.sh` + start from Step 4): all pairings are lost. Re-run `configure-openclaw.sh` and repeat Steps 7–8 to re-pair browser and Telegram.
 
 ---
 
