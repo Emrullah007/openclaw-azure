@@ -1,6 +1,6 @@
 # OpenClaw on Azure
 
-[![CI](https://github.com/Emrullah007/openclaw-azure/actions/workflows/shell-lint.yml/badge.svg)](https://github.com/Emrullah007/openclaw-azure/actions/workflows/shell-lint.yml)
+[![CI](https://github.com/Emrullah007/openclaw-azure/actions/workflows/validate.yml/badge.svg)](https://github.com/Emrullah007/openclaw-azure/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 > Deploy your own private AI assistant on Azure in under 30 minutes — no cloud AI subscriptions, no data leaving your control.
@@ -26,39 +26,39 @@ This repository is a **ready-to-use deployment package** for OpenClaw on Azure. 
 ## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  Your Local Machine                                     │
-│                                                         │
-│  $ ssh -L 18789:localhost:18789 <admin-username>@<vm-ip> │
-│         │                                               │
-│         │  SSH Tunnel (encrypted)                       │
-└─────────┼───────────────────────────────────────────────┘
-          │
-          ▼
-┌─────────────────────────────────────────────────────────┐
-│  Azure Resource Group                                   │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  Ubuntu 24.04 VM  (Standard_B2als_v2)            │   │
-│  │                                                  │   │
-│  │  ┌────────────────────────────────────────────┐  │   │
-│  │  │  Docker Container: OpenClaw                │  │   │
-│  │  │                                            │  │   │
-│  │  │  Gateway (ws://localhost:18789)            │◄─┼───┼── Telegram Bot
-│  │  │  ├── Session & channel management         │  │   │
-│  │  │  ├── Tool execution (browser, shell, etc) │  │   │
-│  │  │  └── LLM calls ──────────────────────────►│  │   │
-│  │  └─────────────────────────────┬──────────────┘  │   │
-│  └────────────────────────────────┼─────────────────┘   │
-│                                   │                     │
-└───────────────────────────────────┼─────────────────────┘
-                                    │
-                                    ▼
-                    ┌───────────────────────────┐
-                    │  Azure AI / AI Foundry    │
-                    │  (separate resource group)│
-                    │  GPT-4o / custom model    │
-                    └───────────────────────────┘
++----------------------------------------------------------+
+|  Your Local Machine                                      |
+|                                                          |
+|  $ ssh -L 18789:localhost:18789 <admin-username>@<vm-ip> |
+|            |                                             |
+|            |  SSH Tunnel (encrypted)                     |
++------------|---------------------------------------------+
+             |
+             v
++----------------------------------------------------------+
+|  Azure Resource Group                                    |
+|                                                          |
+|  +----------------------------------------------------+  |
+|  |  Ubuntu 24.04 VM  (Standard_B2als_v2)              |  |
+|  |                                                    |  |
+|  |  +----------------------------------------------+  |  |
+|  |  |  Docker Container: OpenClaw                  |  |  |
+|  |  |                                              |  |  |
+|  |  |  Gateway  ws://localhost:18789        <---------+-----  Telegram Bot
+|  |  |  |- Session & channel management     |      |  |  |
+|  |  |  |- Tool execution (browser, shell)  |      |  |  |
+|  |  |  +- LLM calls ----------------------+       |  |  |
+|  |  +-------------------------------|-------------+  |  |
+|  +----------------------------------|----------------+  |
+|                                     |                   |
++-------------------------------------|-------------------+
+                                      |
+                                      v
+                    +---------------------------------+
+                    |  Azure AI / AI Foundry          |
+                    |  (separate resource group)      |
+                    |  GPT-4o / custom model          |
+                    +---------------------------------+
 ```
 
 **Key design decisions:**
