@@ -3,24 +3,37 @@
 # OpenClaw — VM Initialization Script
 # Run this on your LOCAL machine after deploying the VM.
 # It SSHes into the VM and installs Docker + OpenClaw deps.
-# Usage: ./scripts/setup-vm.sh [vm-public-ip]
-# If no IP is given, reads from .deployment-info
+#
+# Usage:
+#   ./scripts/setup-vm.sh                      # reads IP + username from .deployment-info
+#   ./scripts/setup-vm.sh <ip>                 # explicit IP, username from .deployment-info
+#   ./scripts/setup-vm.sh <ip> <username>      # fully explicit, ignores .deployment-info
 # ============================================================
 
 set -euo pipefail
 
-# ── Read deployment state ─────────────────────────────────────
-if [ -f ".deployment-info" ]; then
-  # shellcheck source=/dev/null
-  source .deployment-info
-fi
+# ── Resolve VM IP and SSH username ───────────────────────────
+# If both args are provided, use them directly (no .deployment-info needed).
+# If only IP is provided, still read username from .deployment-info.
+# If neither is provided, read both from .deployment-info.
 
-VM_IP="${1:-${PUBLIC_IP:-}}"
-SSH_USER="${ADMIN_USERNAME:-azureuser}"
+if [ $# -ge 2 ]; then
+  # Fully explicit — ignore .deployment-info entirely
+  VM_IP="$1"
+  SSH_USER="$2"
+else
+  # Load state file if present
+  if [ -f ".deployment-info" ]; then
+    # shellcheck source=/dev/null
+    source .deployment-info
+  fi
+  VM_IP="${1:-${PUBLIC_IP:-}}"
+  SSH_USER="${ADMIN_USERNAME:-azureuser}"
+fi
 
 if [ -z "$VM_IP" ]; then
   echo "❌ No VM IP provided and no .deployment-info found."
-  echo "   Usage: $0 <vm-public-ip>"
+  echo "   Usage: $0 <vm-public-ip> [admin-username]"
   exit 1
 fi
 

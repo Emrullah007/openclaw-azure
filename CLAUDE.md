@@ -46,10 +46,10 @@ az login
 ./scripts/setup-vm.sh <vm-public-ip>
 
 # Access gateway via tunnel (run locally)
-ssh -L 18789:localhost:18789 azureuser@<vm-ip>
+ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
 
 # Stop VM to save money
-az vm deallocate --resource-group openclaw-rg --name openclaw-vm
+az vm deallocate --resource-group <resource-group> --name <vm-name>
 
 # Full teardown
 ./scripts/destroy.sh

@@ -154,8 +154,8 @@ Deployment takes ~3 minutes. At the end you'll see:
 ╠══════════════════════════════════════════════════╣
 ║  Public IP  : 20.x.x.x
 ║  DNS        : your-vm-name.westus2.cloudapp.azure.com
-║  SSH        : ssh azureuser@20.x.x.x
-║  Tunnel     : ssh -L 18789:localhost:18789 azureuser@20.x.x.x
+║  SSH        : ssh <admin-username>@20.x.x.x
+║  Tunnel     : ssh -L 18789:localhost:18789 <admin-username>@20.x.x.x
 ╚══════════════════════════════════════════════════╝
 ```
 
@@ -236,8 +236,8 @@ In `~/.openclaw/config/openclaw.json` on the VM:
 
 | Task | Command |
 |---|---|
-| Stop VM (save money) | `az vm deallocate -g openclaw-rg -n openclaw-vm` |
-| Start VM | `az vm start -g openclaw-rg -n openclaw-vm` |
+| Stop VM (save money) | `az vm deallocate -g <resource-group> -n <vm-name>` |
+| Start VM | `az vm start -g <resource-group> -n <vm-name>` |
 | SSH in | `ssh <admin-username>@<vm-ip>` |
 | Gateway tunnel | `ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>` |
 | View logs | `ssh vm` → `docker compose -f ~/openclaw/docker-compose.yml logs -f` |

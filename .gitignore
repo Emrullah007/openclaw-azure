@@ -1,3 +1,6 @@
+# ── Agent/session state — local only ─────────────────────────
+memory/
+
 # ── Secrets — NEVER commit these ─────────────────────────────
 .env
 *.env

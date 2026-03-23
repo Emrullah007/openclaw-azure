@@ -30,7 +30,7 @@ resource nsg 'Microsoft.Network/networkSecurityGroups@2023-09-01' = {
         }
       }
       // OpenClaw gateway (18789) is NOT exposed publicly.
-      // Access via SSH tunnel: ssh -L 18789:localhost:18789 azureuser@<vm-ip>
+      // Access via SSH tunnel: ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>
       // To open publicly later, add a rule here and update the VM NSG.
       {
         name: 'Deny-All-Inbound'
