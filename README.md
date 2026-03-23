@@ -104,10 +104,17 @@ If not, generate one:
 ssh-keygen -t ed25519 -C "openclaw"
 ```
 
-View your public key (you will paste this into `parameters.json` in a later step):
+View your public key (you will paste this into `parameters.json` in a later step). Run whichever matches your key type:
 
 ```bash
-cat ~/.ssh/id_ed25519.pub   # or id_rsa.pub if you used RSA
+cat ~/.ssh/id_ed25519.pub   # if you generated a new key above
+cat ~/.ssh/id_rsa.pub       # if you already had an RSA key
+```
+
+Not sure which one you have? This lists all your public keys:
+
+```bash
+ls ~/.ssh/*.pub
 ```
 
 ### 4. Your Public IP Address
