@@ -106,8 +106,22 @@ done
 
 # ── Admin username ────────────────────────────────────────────
 echo ""
-read -p "   Admin username [azureuser]: " ADMIN_USERNAME
-ADMIN_USERNAME="${ADMIN_USERNAME:-azureuser}"
+while true; do
+  read -p "   Admin username [azureuser]: " ADMIN_USERNAME
+  ADMIN_USERNAME="${ADMIN_USERNAME:-azureuser}"
+
+  # Linux username rules: start with letter/underscore, letters/numbers/hyphens/underscores, max 32 chars
+  # Also block reserved names that Azure/Linux reject
+  if ! [[ "$ADMIN_USERNAME" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+    echo -e "   ${RED}❌ Username must start with a letter or underscore, contain only lowercase letters, numbers, hyphens, underscores, and be max 32 chars.${NC}"
+    continue
+  fi
+  if [[ "$ADMIN_USERNAME" =~ ^(root|admin|administrator|guest|nobody|daemon|bin|sys|sync|games|man|lp|mail|news|uucp|proxy|www-data|backup|list|irc|gnats|sshd|ubuntu)$ ]]; then
+    echo -e "   ${RED}❌ '$ADMIN_USERNAME' is a reserved system username. Please choose another.${NC}"
+    continue
+  fi
+  break
+done
 echo -e "   ${GREEN}✔ Admin username: $ADMIN_USERNAME${NC}"
 
 # ── Summary ───────────────────────────────────────────────────

@@ -1,0 +1,40 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shell:
+    name: Shell scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check syntax (bash -n)
+        run: |
+          bash -n scripts/deploy.sh
+          bash -n scripts/setup-vm.sh
+          bash -n scripts/destroy.sh
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ./scripts
+          severity: warning
+
+  bicep:
+    name: Bicep templates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Azure CLI + Bicep
+        run: |
+          curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+          az bicep install
+
+      - name: Build (lint) Bicep
+        run: az bicep build --file infra/main.bicep --stdout > /dev/null

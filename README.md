@@ -181,13 +181,13 @@ At the end you'll see a security summary confirming all layers are active.
 
 **5a. Clone OpenClaw** — SSH into the VM and clone the repo:
 ```bash
-ssh azureuser@20.x.x.x
+ssh <admin-username>@20.x.x.x   # username chosen during deploy, default: azureuser
 git clone https://github.com/openclaw/openclaw.git ~/openclaw
 ```
 
 **5b. Copy your `.env`** — run this on your **local machine**:
 ```bash
-scp docker/.env azureuser@20.x.x.x:~/openclaw/.env
+scp docker/.env <admin-username>@20.x.x.x:~/openclaw/.env
 ```
 
 **5c. Run OpenClaw setup** — back on the VM:
@@ -203,7 +203,7 @@ This builds the Docker image and starts the OpenClaw gateway.
 The gateway only listens on localhost (not exposed to the internet). Access it via SSH tunnel from your local machine:
 
 ```bash
-ssh -L 18789:localhost:18789 azureuser@20.x.x.x
+ssh -L 18789:localhost:18789 <admin-username>@20.x.x.x
 ```
 
 Then open `http://localhost:18789` in your browser. You'll see the OpenClaw web UI.
@@ -238,8 +238,8 @@ In `~/.openclaw/config/openclaw.json` on the VM:
 |---|---|
 | Stop VM (save money) | `az vm deallocate -g openclaw-rg -n openclaw-vm` |
 | Start VM | `az vm start -g openclaw-rg -n openclaw-vm` |
-| SSH in | `ssh azureuser@<vm-ip>` |
-| Gateway tunnel | `ssh -L 18789:localhost:18789 azureuser@<vm-ip>` |
+| SSH in | `ssh <admin-username>@<vm-ip>` |
+| Gateway tunnel | `ssh -L 18789:localhost:18789 <admin-username>@<vm-ip>` |
 | View logs | `ssh vm` → `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
 | Teardown everything | `./scripts/destroy.sh` |
 
