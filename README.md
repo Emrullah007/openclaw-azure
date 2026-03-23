@@ -356,10 +356,11 @@ docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli pairing ap
 
 Your bot is now active. Send it any message and it will respond using your Azure AI model.
 
-> **Tip:** Add an alias on the VM to shorten these commands:
+> **Tip:** `setup-vm.sh` automatically adds an `oc` alias to `~/.bashrc`. Activate it in your current shell with `source ~/.bashrc`, then use `oc` instead of the full `docker compose` command:
 > ```bash
-> alias oc='docker compose -f ~/openclaw/docker-compose.yml run --rm openclaw-cli'
-> # Then use: oc devices list | oc devices approve <id> | oc pairing approve telegram <code>
+> oc devices list
+> oc devices approve <id>
+> oc pairing approve telegram <code>
 > ```
 
 ---

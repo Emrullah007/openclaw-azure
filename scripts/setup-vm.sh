@@ -117,6 +117,17 @@ echo "✅ Automatic security updates enabled"
 echo "📁 Setting up OpenClaw directories..."
 mkdir -p ~/.openclaw/workspace
 
+# ── openclaw-cli alias ────────────────────────────────────────
+ALIAS_LINE="alias oc='docker compose -f \$HOME/openclaw/docker-compose.yml run --rm openclaw-cli'"
+if ! grep -qF "alias oc=" ~/.bashrc; then
+  echo "" >> ~/.bashrc
+  echo "# OpenClaw CLI shortcut" >> ~/.bashrc
+  echo "$ALIAS_LINE" >> ~/.bashrc
+  echo "✅ Added 'oc' alias to ~/.bashrc"
+else
+  echo "✅ 'oc' alias already in ~/.bashrc"
+fi
+
 echo ""
 echo "════════════════════════════════════════"
 echo " ✅ VM setup complete!"
@@ -128,6 +139,7 @@ echo "   ✔ fail2ban active (blocks brute force)"
 echo "   ✔ Automatic security updates enabled"
 echo "   ✔ Azure NSG restricts SSH to your IP (cloud level)"
 echo "   ✔ Docker installed via official apt repo (pinned, auditable)"
+echo "   ✔ 'oc' alias added to ~/.bashrc (shortcut for openclaw-cli)"
 echo ""
 echo " Next steps:"
 echo "   Run on your local machine: ./scripts/configure-openclaw.sh"
