@@ -415,6 +415,54 @@ Then refresh the browser.
 
 ---
 
+## Upgrading OpenClaw
+
+SSH into the VM, then:
+
+```bash
+# 1. Pull the latest image
+docker compose -f ~/openclaw/docker-compose.yml pull
+
+# 2. Restart the containers
+docker compose -f ~/openclaw/docker-compose.yml up -d
+
+# 3. Verify the version
+oc --version
+```
+
+> **Requires `OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:latest` in `~/openclaw/.env`** (set automatically by `configure-openclaw.sh` if you copied from `.env.example`). Without this, `docker compose pull` has nothing to pull — the default image is locally built.
+
+---
+
+## Maintenance
+
+| Task | Command (run on VM) |
+|---|---|
+| Check container status | `docker compose -f ~/openclaw/docker-compose.yml ps` |
+| View logs | `docker compose -f ~/openclaw/docker-compose.yml logs -f` |
+| Check disk usage | `df -h` |
+| Remove unused Docker images | `docker image prune -a` |
+
+---
+
+## Running on Small VMs
+
+The `Standard_B2als_v2` has 4 GB RAM which is usually sufficient, but if OpenClaw is slow to start or containers are killed unexpectedly, add a 1 GB swap file:
+
+```bash
+sudo fallocate -l 1G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Persist across reboots
+sudo bash -c 'echo "/swapfile none swap sw 0 0" >> /etc/fstab'
+```
+
+This provides a safety margin during image pulls or cold starts.
+
+---
+
 ## Troubleshooting
 
 **HTTP 404: Resource not found / model_not_found**
