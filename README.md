@@ -428,6 +428,9 @@ docker compose -f ~/openclaw/docker-compose.yml up -d
 
 # 3. Verify the version
 oc --version
+
+# 4. Remove old image layers (frees disk space on the small VM)
+docker image prune -a
 ```
 
 > **Requires `OPENCLAW_IMAGE=ghcr.io/openclaw/openclaw:latest` in `~/openclaw/.env`** (set automatically by `configure-openclaw.sh` if you copied from `.env.example`). Without this, `docker compose pull` has nothing to pull — the default image is locally built.
